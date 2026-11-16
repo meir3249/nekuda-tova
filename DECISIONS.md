@@ -14,7 +14,7 @@ Status legend: **Approved** (user said so explicitly) · **Proposed** (written i
 | 1 Discovery | Done |
 | 2 Plan (PWA + Supabase + GitHub Actions) | **Approved** by user (D-010 and refinements D-011..D-014) |
 | 3 Specifications (`specs/`) | **Approved** by user on 2026-11-16 (repo structure, 8 task specs, order, acceptance criteria, P-01..P-15) |
-| 4 Implementation | **In progress.** Tasks 01, 02 done (02 committed locally). Task 03 implemented, awaiting review. Tasks 04..08 pending. |
+| 4 Implementation | **In progress.** Tasks 01, 02, 03 done and committed locally. Task 04 implemented except the database tests and live-project steps that need Docker or a Supabase project. Tasks 05..08 pending. |
 
 ---
 
@@ -126,3 +126,25 @@ None beyond D-xxx above. Any assumption in the specs is labeled `ASSUMPTION` and
 - **P-14 status:** implemented as specified. No once-per-day guard; a re-enable or time change computes the next strictly-upcoming occurrence (covered by a test).
 - **Settings:** `applySettingsChange` takes an optional fifth parameter, the push endpoint allowlist (default `DEFAULT_PUSH_ENDPOINT_ALLOWLIST`, P-08), so the allowlist stays data. A subscription is validated only when the resulting state is enabled. Disabling always clears the stored subscription.
 - **Timezone validity:** IANA-style names only (contains `/`, or `UTC`). Names such as `EST` or `EST5EDT` are rejected by design.
+
+## 9. Task 04 implementation notes (2026-11-16)
+
+Status of proposals touched by this task:
+- **P-01 (only the Edge Function writes):** implemented in SQL. RLS on, one `SELECT` policy (own row), no write policies, client privileges revoked. *Verified by static migration tests and written pgTAP tests; the pgTAP tests have not been executed (see below).*
+- **P-02 (disable removes the subscription, keeps the counter):** implemented in core and exercised through the handler tests.
+- **P-03 (365-day retention of disabled rows) and P-04 (sender heartbeat table):** `prune_inactive`, `sender_runs`, `prune_delivery_log` exist; scheduling them is Task 05.
+- **P-05 (claim lease):** `claim_due_subscriptions` uses a lease plus `FOR UPDATE SKIP LOCKED`.
+- **P-08 (endpoint allowlist):** enforced by core `validatePushSubscription` inside the function; the allowlist is data in `src/core/settings/push-endpoint-allowlist.ts`.
+- **P-09 (capacity cap):** `MAX_SUBSCRIPTIONS` (default 5000); new users only, existing users are never blocked.
+
+Choices made while implementing (flagged for review):
+1. **Column-level read grant.** Clients may `SELECT` only `id, local_time, timezone, enabled, next_send_at, updated_at` from `subscriptions`. They cannot read their own push endpoint/keys, start index, counter or lease. This is stricter than the spec's table-level grant. Consequence: a client `select *` fails with a permission error; the PWA reads through the `settings` function.
+2. **Settings updates write only changed columns.** The function never writes `start_index` or `message_index` on an existing row, and writes `next_send_at` only when it changed. This stops a settings request that raced the sender from rewinding the counter or re-arming a just-sent message. New rows are inserted once; if two first requests race, the loser re-applies on top of the winner.
+3. **`userId` in a POST body.** The spec says both "unknown keys rejected" and "body `userId` is ignored". Resolved by accepting `userId` as a known key that is always ignored; identity comes from the verified token.
+4. **Extra SQL functions:** `peek_due_subscriptions` (read-only dry run for `UserRepository.peekDue`) and `count_subscriptions` (capacity cap) were added; both are service-role only.
+5. **Typed errors:** `RepositoryUnavailableError` for network failure/status 0/5xx (including a paused project); `RepositoryError` otherwise.
+6. **Server key lookup:** the function reads `SUPABASE_SECRET_KEYS` (new projects) and falls back to the legacy `SUPABASE_SERVICE_ROLE_KEY`.
+
+**Bundling decision (R-09):** the function imports `src/core` and `src/adapters/supabase` by relative path (no `esbuild` added). **Unverified:** I could not run `supabase functions serve/deploy` (Docker daemon not running, no project yet), so whether the CLI bundler follows those imports is still an assumption. The handler itself is fully tested under Vitest. Fallback if deploy fails: bundle `src/core` with `esbuild` (needs approval to add the dependency).
+
+**Not executed in this environment:** `supabase/tests/database/subscriptions.test.sql`, the two-connection claim concurrency check, the idempotent double `db reset`, and anything against a real Supabase project. See `docs/operations.md` section 1.5 and 1.6.

@@ -16,5 +16,6 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "tests", "scripts", "*.config.ts"]
+  "include": ["src", "tests", "scripts", "supabase/functions", "*.config.ts"],
+  "exclude": ["supabase/functions/**/index.ts"]
 }

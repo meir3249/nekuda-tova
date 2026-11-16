@@ -1,6 +1,13 @@
 export type { Clock } from './ports/clock.ts'
 export type { ContentSource } from './ports/content-source.ts'
 export type { StoredPushSubscription, Subscription, UserRepository } from './ports/user-repository.ts'
+export type {
+  DeliveryLog,
+  DeliveryLogEntry,
+  DeliveryStatus,
+  RunSummary,
+} from './ports/delivery-log.ts'
+export type { SettingsPatch, SettingsStore } from './ports/settings-store.ts'
 export * from './content/index.ts'
 export { messageIndexFor, randomStartIndex } from './progression/index.ts'
 export { isValidSlot, parseSlot, SLOTS } from './scheduling/slots.ts'
