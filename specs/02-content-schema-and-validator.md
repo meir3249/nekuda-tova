@@ -94,3 +94,14 @@ Ids `msg_9999` → `msg_10000` (≥ 4 digits allowed); whitespace-only content; 
 
 ## Definition of Done
 Acceptance criteria met; docs reviewed against D-003/D-008; CI green; `DECISIONS.md` updated (schema recorded, P-10 status).
+
+## Implementation notes (added during Task 02; refinements, no product behavior change)
+
+- New code `INVALID_MESSAGE`: an entry in `messages` that is not a JSON object.
+- `TOO_MANY_ERRORS`: at most 50 real errors are reported, followed by one marker issue (51 entries).
+- `ID_CASE_COLLISION` was dropped. The id pattern is lower-case only, so upper-case ids are `INVALID_ID` and the collision cannot occur.
+- Diff check codes: errors `ID_REMOVED_WITHOUT_RETIRE`, `RETIRED_ID_DROPPED` (an id retired in the base file must stay retired); warnings `MESSAGE_REMOVED`, `ORDER_CHANGED`, `INSERTED_NOT_AT_END`, `COUNT_CHANGED`. Any change of `N` produces `COUNT_CHANGED` because `(start + counter) mod N` shifts readers who have completed a cycle, even for append-only edits. The diff logic is pure (`src/core/content/diff.ts`); the script only does I/O.
+- Invalid UTF-8 is detected by the adapter (strict decoder) and reported by the scripts as `INVALID_JSON` with exit code 1.
+- `validate:content` runs as `node scripts/validate-content.ts` (Node 24 type stripping); relative imports use `.ts` extensions.
+- CI adds a pull-request step that fetches the base branch copy of `data/messages.json` and runs the diff check (skipped when no base copy exists).
+- Sample `data/messages.json` is 12 Hebrew **placeholder** messages (user to replace). Phrasing avoids gendered forms where Hebrew allows.

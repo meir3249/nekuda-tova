@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "retiredIds": ["msg_0003"],
+  "messages": [
+    { "id": "msg_0001", "content": "הודעה ראשונה", "tags": ["calm"] },
+    { "id": "msg_0002", "content": "הודעה שנייה" },
+    { "id": "msg_0004", "content": "Third, in English.", "tags": [] }
+  ]
+}

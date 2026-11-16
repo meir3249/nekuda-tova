@@ -36,7 +36,7 @@ GitHub Pages workflow arrives in Task 06. *(Task 06)*
 Pure TypeScript core (`src/core`) with ports; adapters for Supabase, web-push, the repo file, and the system clock; a PWA; a scheduled sender. `src/core` may not import infrastructure, enforced by an ESLint rule and a boundary test. Structure and contracts: [specs/00-overview.md](specs/00-overview.md). *(Task 08)*
 
 ## Content
-Messages live in `data/messages.json`. Management guide arrives in Task 02. *(Task 02)*
+Messages live in `data/messages.json` (currently Hebrew placeholders). Read [docs/content-management.md](docs/content-management.md) before editing. Validate with `npm run validate:content`.
 
 ## Limitations
 Delivery and exact timing cannot be guaranteed. See `docs/limitations.md` once written. *(Task 08)*

@@ -23,5 +23,12 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:boundary
-      # No-op until Task 02 adds the real validator.
       - run: npm run validate:content
+      - name: Content change impact (pull requests only)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          git show FETCH_HEAD:data/messages.json > "$RUNNER_TEMP/base-messages.json" || rm -f "$RUNNER_TEMP/base-messages.json"
+          node scripts/check-content-diff.ts "$RUNNER_TEMP/base-messages.json" data/messages.json
