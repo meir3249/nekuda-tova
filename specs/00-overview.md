@@ -75,9 +75,10 @@ Dependency rule: `pwa`, `sender`, `adapters`, `supabase/functions` may import `c
 - All time values at boundaries are `Date` (UTC instants) or ISO-8601 strings with `Z`. `local_time` is `"HH:MM"` 24-hour.
 - Indexing: **0-based**. `messages[i]` with `0 ≤ i < N`.
 - Errors in core: return typed results for expected failures; throw only for programmer errors (e.g. `N ≤ 0`).
-- UI strings live in `src/pwa/strings.ts` (default English, see Q-01).
-- No analytics, no third-party scripts, no remote fonts.
+- UI strings live in `src/pwa/strings.ts` (Hebrew, RTL; Q-01) and follow the Calm-space principle below.
+- No analytics, no third-party scripts, no fonts or assets from a third party (the one font, Rubik, is self-hosted).
 - Secrets never committed. Agent never asks for or receives secret values.
+- **Calm-space principle.** Nekuda Tova is a space of peace: the screen itself is the space; the content only lives in it. It is never messy, crowded or bustling. Wide breathing room on a deep night-blue field, a few soft rounded cards, and each label sharing one quiet row with its control. Nothing appears by itself on load, except a one-time, dismissible install hint in iOS Safari. At most one gentle notice is visible at a time, always in the single floating toast (or that one soft sheet). No banners, inline status or error lines, helper text under controls, diagrams, badges or stacked messages. Copy is one short, warm sentence, never alarming or guilt-inducing. Accessibility and the permission rules (D-013) are met through semantics and focus, not extra visible text. Every new element must justify itself against this; when in doubt, leave it out.
 
 ## 4. Shared contracts (authoritative; every task conforms to these)
 
@@ -145,7 +146,7 @@ Notes:
 
 ## 5. Behavior summary (single place to read the whole system)
 
-1. A user opens the PWA, picks a 30-minute slot, taps enable, grants permission. The PWA calls the `settings` Edge Function, which validates, creates or updates the row, and computes `next_send_at`.
+1. A user opens the PWA, picks a 30-minute slot, taps the notifications switch, grants permission. The PWA calls the `settings` Edge Function, which validates, creates or updates the row, and computes `next_send_at`.
 2. Every 30 minutes the sender validates `data/messages.json`, then claims rows with `enabled AND next_send_at <= now`.
 3. For each claimed row: `delay = attempt − scheduled`. If `delay > 7200 s` → skip, log `skipped_stale`, `next_send_at = next occurrence after now`, counter unchanged.
 4. Otherwise message index = `(start_index + message_index) mod N` (0-based), push with short TTL.

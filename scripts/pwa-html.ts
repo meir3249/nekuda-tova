@@ -6,7 +6,7 @@ import { strings } from '../src/pwa/strings.ts'
 export interface RenderHtmlOptions {
   /** Extra origins the page may connect to (the Supabase project). `null` = no CSP (dev server, which needs inline HMR). */
   connectOrigins: readonly string[] | null
-  /** Link to the privacy note; the footer is omitted when empty. */
+  /** Link to the privacy note, shown quietly at the end of "How it works"; omitted when empty. */
   privacyUrl: string
 }
 
@@ -48,9 +48,12 @@ export function renderIndexHtml(template: string, opts: RenderHtmlOptions): stri
   })
 
   const options = SLOTS.map((s) => `<option value="${s}"${s === '09:00' ? ' selected' : ''}>${s}</option>`).join('')
-  const how = strings.howItWorks.map((p) => `<p>${escapeHtml(p)}</p>`).join('\n        ')
-  const footer = opts.privacyUrl
-    ? `<footer><a href="${escapeHtml(opts.privacyUrl)}" rel="noopener noreferrer">${escapeHtml(strings.privacyLink)}</a></footer>`
+  // The last paragraph (what is stored) is fine print; the privacy link, when configured, closes the section.
+  const how = strings.howItWorks
+    .map((p, i, all) => `<p${i === all.length - 1 ? ' class="fine"' : ''}>${escapeHtml(p)}</p>`)
+    .join('\n          ')
+  const privacy = opts.privacyUrl
+    ? `<p class="privacy"><a href="${escapeHtml(opts.privacyUrl)}" rel="noopener noreferrer">${escapeHtml(strings.privacyLink)}</a></p>`
     : ''
   const csp =
     opts.connectOrigins === null
@@ -60,7 +63,7 @@ export function renderIndexHtml(template: string, opts: RenderHtmlOptions): stri
   for (const [marker, value] of [
     ['<!--NTK:SLOT_OPTIONS-->', options],
     ['<!--NTK:HOW_IT_WORKS-->', how],
-    ['<!--NTK:FOOTER-->', footer],
+    ['<!--NTK:PRIVACY-->', privacy],
     ['<!--NTK:CSP-->', csp],
   ] as const) {
     if (!html.includes(marker)) throw new Error(`index.html is missing ${marker}`)

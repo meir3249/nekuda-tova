@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SLOTS } from '../../src/core/index.ts'
-import { PRODUCT_NAME, strings } from '../../src/pwa/strings.ts'
+import { PRODUCT_NAME, TOAST_KEYS, strings } from '../../src/pwa/strings.ts'
 import { formatSlot, slotOptions } from '../../src/pwa/ui/time-select.ts'
 
 describe('strings', () => {
@@ -23,6 +23,16 @@ describe('strings', () => {
       const text = (Array.isArray(value) ? value : [value]).join(' ')
       expect(text, key).not.toContain(PRODUCT_NAME)
       expect(text.toLowerCase(), key).not.toContain('nekuda')
+    }
+  })
+
+  it('calm space: toast copy is one short, gentle line (≤ 60 chars, no alarm words, no exclamation marks)', () => {
+    const ALARM = /שגיאה|נכשל|חסום|חסומ|אזהרה|דחוף|error|fail|block|warn/i
+    for (const key of TOAST_KEYS) {
+      const s = strings[key] as string
+      expect(s.length, key).toBeLessThanOrEqual(60)
+      expect(s, key).not.toMatch(ALARM)
+      expect(s, key).not.toContain('!')
     }
   })
 

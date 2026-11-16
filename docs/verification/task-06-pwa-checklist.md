@@ -28,7 +28,7 @@ Full WCAG conformance needs testing with assistive technologies and an expert re
 | One polite live region for status | Auto | `role="status"`, `aria-live="polite"`, rendered as a floating bottom toast outside `<main>`; bottom padding reserved so content is never permanently hidden |
 | Visible focus | Checked (CSS) | 3 px warm outline via `:focus-visible`; focus colour contrast ≥ 3:1 on every background token (`contrast.test.ts`). **Open:** keyboard walk-through on a device |
 | Contrast ≥ 4.5:1 text, ≥ 3:1 UI | Auto | `contrast.test.ts` over the CSS tokens, including the lightest painted gradient point and the toast |
-| Touch targets ≥ 44 px | Checked (CSS) | Select 3.75rem high; switch hit area enlarged to ≥ 2.75rem; summary and footer link padded. **Open:** measure on a phone |
+| Touch targets ≥ 44 px | Checked (CSS) | Select 3.25rem high; switch hit area enlarged to ≥ 2.75rem; summary and privacy link padded. **Open:** measure on a phone |
 | 200% text zoom | **Open** | Layout uses rem and wraps; not yet checked at 200% on a device |
 | `prefers-reduced-motion` | Checked (CSS) | All transitions and the breathing animation removed under `reduce`; the toast appears without moving |
 | Colour scheme | Checked | Single dark "cosmic ocean" palette (no light variant, by decision); screenshots reviewed at 390×844 and 1280×800 |
@@ -48,5 +48,5 @@ Full WCAG conformance needs testing with assistive technologies and an expert re
 | Service worker registration fails | By construction: registration errors are swallowed; the screen does not depend on it |
 | Corrupted cache | Auto |
 | Timezone differs from cached | Auto: the device timezone is re-read on every open. Following the change on the server is Task 07 |
-| Dark mode, narrow screen | Checked at 390 px wide |
+| Dark mode, narrow screen | Checked at 390 px and 320 px wide (label and picker stay on one row) |
 | iOS tab vs installed app storage | Documented (Task 07 handles creation only after install on iOS) |

@@ -97,7 +97,7 @@ body::before {
   padding-block-start: max(clamp(3.5rem, 12vh, 7rem), env(safe-area-inset-top));
   /* Room for the floating toast so it never covers the last element. */
   padding-block-end: max(7rem, calc(env(safe-area-inset-bottom) + 6rem));
-  padding-inline: max(clamp(1.5rem, 6vw, 3rem), env(safe-area-inset-left)) max(clamp(1.5rem, 6vw, 3rem), env(safe-area-inset-right));
+  padding-inline: max(clamp(1.25rem, 6vw, 3rem), env(safe-area-inset-left)) max(clamp(1.25rem, 6vw, 3rem), env(safe-area-inset-right));
 }
 
 /* ---- Header ---- */
@@ -163,12 +163,22 @@ h1 {
 .controls {
   display: grid;
   gap: 2rem;
-  padding: clamp(1.5rem, 6vw, 2.25rem);
+  padding: clamp(1.25rem, 6vw, 2.25rem);
 }
 
 .field {
   display: grid;
   gap: 0.75rem;
+}
+
+/* A quiet label-and-control pair on one row: label at the inline start, control at the inline end, open space
+   between. Wraps (label above control) only when there is genuinely no room, e.g. at 200% text zoom. */
+.row-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
 }
 
 label {
@@ -181,7 +191,7 @@ label {
 .select-wrap {
   position: relative;
   display: block;
-  max-inline-size: 15rem;
+  flex: none;
 }
 
 /* Chevron, pointing down in both directions. */
@@ -189,7 +199,7 @@ label {
   content: '';
   position: absolute;
   inset-block-start: 50%;
-  inset-inline-end: 1.4rem;
+  inset-inline-end: 1rem;
   inline-size: 0.55rem;
   block-size: 0.55rem;
   border-right: 2px solid var(--muted);
@@ -201,13 +211,13 @@ label {
 select {
   appearance: none;
   -webkit-appearance: none;
-  inline-size: 100%;
-  min-block-size: 3.75rem;
+  inline-size: auto;
+  min-block-size: 3.25rem;
   margin: 0;
-  padding-block: 0.5rem;
-  padding-inline: 1.4rem 3.25rem;
+  padding-block: 0.4rem;
+  padding-inline: 1rem 2.5rem;
   font: inherit;
-  font-size: 1.625rem;
+  font-size: clamp(1.25rem, 5.5vw, 1.375rem);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
@@ -288,8 +298,6 @@ option {
 /* ---- Notifications switch: a native checkbox with role="switch". ---- */
 
 .switch-field {
-  grid-template-columns: 1fr auto;
-  align-items: center;
   padding-block-start: 2rem;
   border-block-start: 1px solid var(--hairline);
 }
@@ -425,28 +433,29 @@ input[type='checkbox'][role='switch']:checked::before {
 
 .how p:last-child {
   margin-block-end: 0;
+}
+
+.how .fine {
   color: var(--muted);
   font-size: 0.9375rem;
 }
 
-/* ---- Footer ---- */
-
-footer {
-  text-align: center;
+/* The privacy link: one quiet line closing the section (no footer bar). */
+.how .privacy {
+  margin-block-start: 0.5rem;
   font-size: 0.9375rem;
 }
 
-footer a {
+.how .privacy a {
   display: inline-block;
   min-block-size: 2.75rem;
   padding-block: 0.6rem;
-  padding-inline: 1rem;
   color: var(--muted);
   text-underline-offset: 0.25em;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
 }
 
-footer a:hover {
+.how .privacy a:hover {
   color: var(--text);
 }
 

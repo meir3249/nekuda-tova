@@ -215,3 +215,12 @@ Second review refinements (2026-11-16):
 16. **Picker label "שעת התראה", no helper text.** The "arrives around the time you chose" note moved into "How it works", stated honestly: sometimes a little after; more than 2 hours late means that day is skipped (D-011).
 17. **"How it works" open state:** a hairline under the header and a softer lifted tint behind the text.
 18. **Icons** show the screen's glowing orb (highlight, warm rim, soft halo) on the night-blue gradient; the maskable icon keeps the orb inside the safe zone.
+
+## 12. Calm-space principle (2026-11-16, from your steering)
+
+You asked that the app be a space of peace, where the screen itself is the space, never messy, crowded or bustling. This is now a convention in spec 00 §3 and governs specs 06–08:
+- **Screen:** the time picker sits on the same row as its label (as the switch does); the privacy link moved from a separate footer to one quiet line at the end of "How it works"; the controls card holds only the two rows (tested).
+- **One channel:** every message goes through the single toast, one at a time, only after a user action; toast copy is one short gentle sentence (tested: ≤ 60 characters, no alarm words, no exclamation marks).
+- **Spec 07 rewritten accordingly** (it previously had persistent inline lines for denied, unsupported and iOS-tab states, an overlay on every open with a four-step list and a diagram, and guilt-tinged denied copy): quiet switches (`aria-disabled`, still tappable) with a toast on tap; the denied copy is neutral ("Notifications are off in your device settings. You can turn them on there anytime.").
+- **Behavior change for your review:** the iOS install hint is now a soft bottom sheet (no dimmed backdrop) that appears automatically **once**, then only when the switch is tapped, instead of on every open. D-013 still holds (dismissible, never blocks settings).
+- Specs 06/07/08 gained calm-space acceptance criteria and checklist rows.

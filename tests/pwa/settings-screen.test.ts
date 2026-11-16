@@ -74,7 +74,18 @@ describe('static HTML (first paint without JavaScript)', () => {
     expect(m.doc.querySelector('label[for="time"]')!.textContent).toBe(strings.timeLabel)
     expect(m.doc.querySelector('label[for="notify"]')!.textContent).toBe(strings.notificationsLabel)
     expect(m.doc.querySelector('details.how')!.hasAttribute('open')).toBe(false)
-    expect(m.doc.querySelector('footer a')!.getAttribute('href')).toBe('https://example.org/privacy')
+    expect(m.doc.querySelector('details.how .privacy a')!.getAttribute('href')).toBe('https://example.org/privacy')
+    expect(m.doc.querySelector('footer')).toBeNull()
+  })
+
+  it('calm space: the controls card holds only two label/control rows, no helper or status text', () => {
+    const m = mount({ api: null })
+    const card = m.doc.querySelector('.controls')!
+    const rows = card.querySelectorAll(':scope > .row-field')
+    expect(rows).toHaveLength(2)
+    expect(card.children).toHaveLength(2)
+    expect(card.querySelector('.hint, [role="status"], p')).toBeNull()
+    expect(m.doc.querySelectorAll('[role="status"]')).toHaveLength(1)
   })
 
   it('has no feed, history, streak, loader or refresh UI', () => {
@@ -82,13 +93,13 @@ describe('static HTML (first paint without JavaScript)', () => {
     expect(html).not.toMatch(/<(dialog|progress)\b/i)
   })
 
-  it('omits the footer when no privacy URL is configured', () => {
+  it('omits the privacy link when no privacy URL is configured', () => {
     const plain = renderIndexHtml(readFileSync('src/pwa/index.html', 'utf8'), { connectOrigins: null, privacyUrl: '' })
-    expect(plain).not.toContain('<footer>')
+    expect(plain).not.toContain('class="privacy"')
   })
 
   it('throws on an unknown string key (no silent blanks)', () => {
-    expect(() => renderIndexHtml('{{nope}}<!--NTK:SLOT_OPTIONS--><!--NTK:HOW_IT_WORKS--><!--NTK:FOOTER--><!--NTK:CSP-->', { connectOrigins: null, privacyUrl: '' })).toThrow(/nope/)
+    expect(() => renderIndexHtml('{{nope}}<!--NTK:SLOT_OPTIONS--><!--NTK:HOW_IT_WORKS--><!--NTK:PRIVACY--><!--NTK:CSP-->', { connectOrigins: null, privacyUrl: '' })).toThrow(/nope/)
   })
 
   it('controls have labels and the status is a polite live region', () => {

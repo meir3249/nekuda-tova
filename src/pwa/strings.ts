@@ -22,9 +22,8 @@ export const strings = {
   howItWorksTitle: 'איך זה עובד',
   howItWorks: [
     'פעם ביום, בשעה שבחרת, מגיעה מחשבה קטנה אחת. משהו שכבר ידעת, ואולי קצת שכחת.',
-    'ההודעה מגיעה בסביבות השעה שבחרת, ולפעמים קצת אחריה. אם היא מתעכבת יותר משעתיים, מוותרים על אותו יום ולא משלימים.',
     'אולי להתקשר למישהו שאוהבים. אולי לעצור לנשימה, ללכת לים, או פשוט לשים לב לרגע.',
-    'אין כאן רצפים, ניקוד או הישגים. לא צריך לענות, לא צריך לפתוח את האפליקציה, ואין שום רגשות אשם אם יום אחד עובר בלי.',
+    'אין כאן מטרה, ניקוד או הישגים. אין צורך לפתוח את האפליקציה, ואין שום רגשות אשם כשיום עובר בלי התראה.',
     'אין חשבון ואין שם. נשמרים רק מזהה אנונימי, השעה שבחרת, אזור הזמן, כתובת ההתראות של המכשיר, ורישום טכני של מועדי השליחה (בלי תוכן ההודעות). כיבוי ההתראות מוחק את כתובת ההתראות.',
   ],
 
@@ -32,3 +31,6 @@ export const strings = {
 } as const
 
 export type StringKey = keyof typeof strings
+
+/** Everything that can appear in the toast (Calm-space principle: one short, warm sentence each). */
+export const TOAST_KEYS = ['saved', 'saveFailed', 'saveRejected', 'capacityReached', 'pushComingSoon'] as const satisfies readonly StringKey[]

@@ -28,7 +28,7 @@
       </header>
 
       <section class="card controls">
-        <div class="field">
+        <div class="field row-field">
           <label for="time">{{timeLabel}}</label>
           <span class="select-wrap">
             <select id="time" name="time">
@@ -37,7 +37,7 @@
           </span>
         </div>
 
-        <div class="field switch-field">
+        <div class="field row-field switch-field">
           <label for="notify">{{notificationsLabel}}</label>
           <span class="switch-wrap">
             <span id="notify-state" class="switch-state">{{notificationsOff}}</span>
@@ -50,10 +50,9 @@
         <summary>{{howItWorksTitle}}</summary>
         <div class="how-body">
           <!--NTK:HOW_IT_WORKS-->
+          <!--NTK:PRIVACY-->
         </div>
       </details>
-
-      <!--NTK:FOOTER-->
     </main>
 
     <p id="status" class="toast" role="status" aria-live="polite"></p>

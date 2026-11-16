@@ -9,7 +9,7 @@ Brief §11, §12 Phase 5, §13. D-001..D-017, R-01..R-10.
 ## Technical design
 
 ### `README.md` (complete)
-What the app does (in the manifesto's voice, non-promotional); principles; architecture overview with the diagram from the plan; repository structure (from 00); development prerequisites (Node LTS from `.nvmrc`, Git, optional Docker for the local Supabase stack, Supabase CLI); how to run (`npm ci`, `npm run dev` for the PWA, `npm run sender -- --dry-run` with env); how to run tests (`npm test`, boundary, content validation, SQL tests); how to build and deploy (Pages workflow); how to set up Supabase and GitHub secrets (link to `docs/operations.md`); content management pointer; known limitations pointer; license note. Costs section: everything is free; lists the services.
+What the app does (in the manifesto's voice, non-promotional); principles (including the Calm-space principle from 00 §3); architecture overview with the diagram from the plan; repository structure (from 00); development prerequisites (Node LTS from `.nvmrc`, Git, optional Docker for the local Supabase stack, Supabase CLI); how to run (`npm ci`, `npm run dev` for the PWA, `npm run sender -- --dry-run` with env); how to run tests (`npm test`, boundary, content validation, SQL tests); how to build and deploy (Pages workflow); how to set up Supabase and GitHub secrets (link to `docs/operations.md`); content management pointer; known limitations pointer; license note. Costs section: everything is free; lists the services.
 
 ### `docs/limitations.md` (guarantees that cannot be provided)
 - Delivery by push services/browsers/OS cannot be guaranteed; we only observe push-service acceptance (D-016). Doze, battery savers, Focus modes, offline devices, and revoked permissions can all prevent display.
@@ -26,15 +26,15 @@ What the app does (in the manifesto's voice, non-promotional); principles; archi
 - No guarantee of operation if free tiers change their terms; migration notes in operations doc.
 
 ### `docs/privacy.md`
-Plain-language note: what is stored (anonymous id, selected time, timezone, enabled flag, message position counter, push subscription token, delivery audit rows without message text); why; where (Supabase, GitHub); how long (subscription removed on disable; disabled rows deleted after 365 days; audit rows after 90 days); what is **not** collected (no name, email, analytics, location beyond timezone name, no third-party trackers); how to remove data (disable notifications removes the push token; clearing site data detaches the identity; row is deleted by retention). A push endpoint is a pseudonymous identifier. Not legal advice; the user should review before public launch.
+Plain-language note: what is stored (anonymous id, selected time, timezone, enabled flag, message position counter, push subscription token, delivery audit rows without message text); why; where (Supabase, GitHub); how long (subscription removed on disable; disabled rows deleted after 365 days; audit rows after 90 days); what is **not** collected (no name, email, analytics, location beyond timezone name, no third-party trackers); how to remove data (disable notifications removes the push token; clearing site data detaches the identity; row is deleted by retention). A push endpoint is a pseudonymous identifier. Written calmly and briefly: short sections in plain language, no legal wall at the top; the "not legal advice, review before public launch" note goes at the end.
 
 ### `docs/operations.md` (runbook)
 Create Supabase project; enable anonymous sign-ins; run migrations; deploy the Edge Function and set `MAX_SUBSCRIPTIONS`; generate VAPID keys (script) and store secrets/variables; enable Pages (source: Actions); first dry run; first real send; monitoring (`sender_runs` freshness, `delivery_log` delays, queries provided); what to do when the workflow was disabled; restoring a paused Supabase project (1-year window per official docs); rotating VAPID keys (all users must resubscribe; documented consequence); adjusting constants (TTL, window) and their effects.
 
 ### `docs/verification/`
-- `device-checklist.md`: per device (Android Chrome tab and installed, desktop Chrome, desktop Firefox, iOS Safari tab, iOS installed, iPadOS) — steps, expected, observed, date, tester, pass/fail/not-run. Includes: install flow, permission denied path, enable/disable/re-enable, time change, timezone change, tap behavior, offline settings, notification arrival and measured delay from `delivery_log`.
-- `final-report-template.md`: completed requirements (mapped to D-xxx and brief sections), test results (commands and outcomes), known limitations, outstanding issues, deviations from specs, recommended next steps.
-- `accessibility-checklist.md` from Task 6.
+- `device-checklist.md`: per device (Android Chrome tab and installed, desktop Chrome, desktop Firefox, iOS Safari tab, iOS installed, iPadOS) — steps, expected, observed, date, tester, pass/fail/not-run. Includes: calm-space checks (first-paint contents, label and control on one row, single toast above the safe area, install sheet once only, no inline status text, nothing on load), install flow, permission denied path, enable/disable/re-enable, time change, timezone change, tap behavior, offline settings, notification arrival and measured delay from `delivery_log`.
+- `final-report-template.md`: completed requirements (mapped to D-xxx and brief sections), test results (commands and outcomes), known limitations, outstanding issues, deviations from specs, a calm-space review (screenshots of each state confirming at most one notice and no inline text), recommended next steps.
+- `accessibility-checklist.md` from Task 6, plus: install-sheet focus in and out, toast announced politely once, switch state conveyed without colour alone.
 
 ### Decision log finalization
 `DECISIONS.md`: every P-xx marked Approved/Rejected with date; Q-xx resolved; risks updated with observed data (cron delay distribution after ≥ 7 days, keep-alive result, Supabase pause behavior); change log complete.
@@ -59,6 +59,7 @@ Tasks 01–07 complete.
 5. Final report is produced, with test output summaries and links to commits.
 6. No doc claims guaranteed delivery, exact timing, or background-execution certainty.
 7. All links in docs resolve (link check script, offline-safe for internal links).
+8. Every user-facing string in `src/pwa/strings.ts` has been reviewed against the Calm-space principle (one short sentence, no alarming words, no guilt, no instructions longer than one sentence); enforced by the string tests from Tasks 6–7 and recorded in the final report.
 
 ## Unit tests
 Doc consistency checks: retention constants in docs equal constants in code; list of limitations contains required headings; link checker for internal links.
@@ -67,7 +68,7 @@ Doc consistency checks: retention constants in docs equal constants in code; lis
 Fresh-clone walkthrough; 7-day soak test summary.
 
 ## Error cases
-Docs referencing removed features; stale diagrams; outdated free-tier numbers (each number in docs is dated; the operations doc says to re-verify before relying on it).
+Docs referencing removed features; stale diagrams; UI copy that no longer follows the calm rules; outdated free-tier numbers (each number in docs is dated; the operations doc says to re-verify before relying on it).
 
 ## Edge cases
 Hebrew/RTL content in docs examples; Windows vs Unix command differences (both provided for key commands); user without Docker (documented manual SQL path).
