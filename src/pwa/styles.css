@@ -43,6 +43,7 @@
   --accent-contrast: #061226;
   --track-off: #1c2a66;
   --star: #ffd58a;
+  --rose: #f2a5b4; /* the gentle "notifications are off" hint: warm, never alarming */
   --focus: #ffd58a;
 
   --radius-lg: 1.75rem;
@@ -312,6 +313,37 @@ option {
   color: var(--muted);
   min-inline-size: 3.5rem;
   text-align: end;
+}
+
+/* While notifications are off: one soft rose line under the row, so it is clear nothing will arrive.
+   The single persistent hint the calm-space principle allows (00 §3); hidden as soon as they are on. */
+.off-hint {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding-block: 0.6rem;
+  padding-inline: 0.9rem;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--rose);
+  background: color-mix(in srgb, var(--rose) 9%, transparent);
+  border-radius: var(--radius-sm);
+}
+
+.off-hint::before {
+  content: '';
+  flex: none;
+  inline-size: 0.4rem;
+  block-size: 0.4rem;
+  border-radius: 50%;
+  background: var(--rose);
+  box-shadow: 0 0 0.6rem color-mix(in srgb, var(--rose) 60%, transparent);
+}
+
+.off-hint[hidden] {
+  display: none;
 }
 
 input[type='checkbox'][role='switch'] {

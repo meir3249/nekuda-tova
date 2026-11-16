@@ -9,6 +9,7 @@ export const ELEMENT_IDS = {
   time: 'time',
   notify: 'notify',
   notifyState: 'notify-state',
+  notifyHint: 'notify-hint',
   status: 'status',
 } as const
 
@@ -48,6 +49,7 @@ export function startSettingsScreen(deps: SettingsScreenDeps): SettingsScreen {
   const select = required<HTMLSelectElement>(doc, ELEMENT_IDS.time, 'select')
   const toggle = required<HTMLInputElement>(doc, ELEMENT_IDS.notify, 'input')
   const stateText = required<HTMLElement>(doc, ELEMENT_IDS.notifyState, 'span')
+  const offHint = required<HTMLElement>(doc, ELEMENT_IDS.notifyHint, 'p')
   const status = createStatusLine(required<HTMLElement>(doc, ELEMENT_IDS.status, 'p'))
 
   // 1. Local state first. The timezone is re-read on every open (the user may have travelled).
@@ -62,6 +64,7 @@ export function startSettingsScreen(deps: SettingsScreenDeps): SettingsScreen {
     toggle.checked = state.enabled
     toggle.setAttribute('aria-checked', String(state.enabled))
     stateText.textContent = state.enabled ? strings.notificationsOn : strings.notificationsOff
+    offHint.hidden = state.enabled
   }
   render()
 

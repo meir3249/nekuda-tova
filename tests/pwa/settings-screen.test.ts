@@ -78,14 +78,23 @@ describe('static HTML (first paint without JavaScript)', () => {
     expect(m.doc.querySelector('footer')).toBeNull()
   })
 
-  it('calm space: the controls card holds only two label/control rows, no helper or status text', () => {
+  it('calm space: the controls card holds only two label/control rows; the only text besides labels is the off hint', () => {
     const m = mount({ api: null })
     const card = m.doc.querySelector('.controls')!
     const rows = card.querySelectorAll(':scope > .row-field')
     expect(rows).toHaveLength(2)
     expect(card.children).toHaveLength(2)
-    expect(card.querySelector('.hint, [role="status"], p')).toBeNull()
+    expect(card.querySelector('.hint, [role="status"]')).toBeNull()
+    expect(Array.from(card.querySelectorAll('p')).map((p) => p.id)).toEqual(['notify-hint'])
     expect(m.doc.querySelectorAll('[role="status"]')).toHaveLength(1)
+  })
+
+  it('the gentle off hint is shown while notifications are off and is part of the switch description', () => {
+    const m = mount({ api: null })
+    const hint = m.doc.getElementById('notify-hint')!
+    expect(hint.hidden).toBe(false)
+    expect(hint.textContent).toBe(strings.notificationsOffHint)
+    expect(m.toggle.getAttribute('aria-describedby')).toContain('notify-hint')
   })
 
   it('has no feed, history, streak, loader or refresh UI', () => {
@@ -105,7 +114,7 @@ describe('static HTML (first paint without JavaScript)', () => {
   it('controls have labels and the status is a polite live region', () => {
     const m = mount({ api: null })
     expect(m.toggle.getAttribute('role')).toBe('switch')
-    expect(m.toggle.getAttribute('aria-describedby')).toBe('notify-state')
+    expect(m.toggle.getAttribute('aria-describedby')).toBe('notify-state notify-hint')
     expect(m.status.getAttribute('role')).toBe('status')
     expect(m.status.getAttribute('aria-live')).toBe('polite')
   })

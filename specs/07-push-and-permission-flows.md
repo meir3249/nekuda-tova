@@ -12,7 +12,7 @@ Hand-off Req 4, 6, 7; Brief §3. D-004, D-013, D-014, D-016, D-017, P-02, P-08, 
 Reads real globals and builds core `EnvInputs`: `navigator.userAgent`, `navigator.platform`, `navigator.maxTouchPoints`, `standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true`, `'serviceWorker' in navigator`, `'PushManager' in window`, `'Notification' in window`, `Notification.permission`. Re-read on every app open and on `visibilitychange`. Pure decision in core `detectEnvironment` (Task 3). Feature detection takes priority; UA/platform is only a hint (iPadOS desktop UA handled by `maxTouchPoints`).
 
 ### State matrix (what the UI does)
-Calm-space rule for every row (00 §3, 06 Screen layout): nothing beside or under the switch, no persistent lines, nothing on load except the one-time install sheet; messages go through the single toast and only after a tap. A "quiet" switch looks off and muted, carries `aria-disabled="true"` and stays focusable and tappable (a fully `disabled` control could not receive the tap that explains it).
+Calm-space rule for every row (00 §3, 06 Screen layout): nothing beside or under the switch except the gentle off hint (06) whenever it is off, no persistent lines, nothing on load except the one-time install sheet; messages go through the single toast and only after a tap. A "quiet" switch looks off and muted, carries `aria-disabled="true"` and stays focusable and tappable (a fully `disabled` control could not receive the tap that explains it).
 
 | Env state | Permission | UI behavior |
 |---|---|---|

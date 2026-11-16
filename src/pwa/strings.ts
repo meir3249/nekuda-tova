@@ -12,6 +12,7 @@ export const strings = {
   notificationsLabel: 'התראות',
   notificationsOn: 'פועלות',
   notificationsOff: 'כבויות',
+  notificationsOffHint: 'כל עוד ההתראות כבויות, לא יגיעו אליך הודעות.',
 
   saved: 'נשמר',
   saveFailed: 'לא הצלחנו לשמור כרגע. ננסה שוב.',

@@ -41,8 +41,9 @@
           <label for="notify">{{notificationsLabel}}</label>
           <span class="switch-wrap">
             <span id="notify-state" class="switch-state">{{notificationsOff}}</span>
-            <input id="notify" name="notify" type="checkbox" role="switch" aria-checked="false" aria-describedby="notify-state" />
+            <input id="notify" name="notify" type="checkbox" role="switch" aria-checked="false" aria-describedby="notify-state notify-hint" />
           </span>
+          <p id="notify-hint" class="off-hint">{{notificationsOffHint}}</p>
         </div>
       </section>
 
