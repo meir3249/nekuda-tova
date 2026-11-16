@@ -2,7 +2,7 @@
 
 Every dependency, with its exact version, license (read from the installed `package.json`, not from memory), purpose, and any free-tier limit. Nothing here costs money (D-009). Anything not listed needs approval before it is added.
 
-Last updated: 2026-11-16 (Task 04).
+Last updated: 2026-11-16 (Task 05).
 
 ## Runtime and tooling
 
@@ -30,6 +30,7 @@ Last updated: 2026-11-16 (Task 04).
 | Package | Version | License | Purpose |
 |---|---|---|---|
 | `@supabase/supabase-js` | 2.119.0 | MIT | Supabase client for the adapters, the Edge Function and the PWA settings API. Its dependencies (`auth-js`, `functions-js`, `postgrest-js`, `realtime-js`, `storage-js`, `phoenix`) were checked and are all MIT. |
+| `web-push` | 4.0.0 | **MPL-2.0** (read from the installed `package.json` and `LICENSE`) | Web Push encryption and VAPID signing for the sender (`src/adapters/web-push`) and `scripts/generate-vapid-keys.ts`. Never shipped to the PWA (boundary rule). |
 
 ### Version choices worth knowing
 - **TypeScript 6.0.3, not the latest 7.0.2.** `typescript-eslint@8.73.0` declares a peer range of `typescript >=4.8.4 <6.1.0`, so 7.x would break linting. Revisit when `typescript-eslint` supports 7.
@@ -43,14 +44,14 @@ Last updated: 2026-11-16 (Task 04).
 
 | Package / service | Task | Check required before adding |
 |---|---|---|
-| `web-push` | 05 | **R-08:** the brief says MIT; believed MPL-2.0. Read the real license from the package, check maintenance status, and record both here. Stop and ask if unmaintained or not free. |
 | `@supabase/supabase-js` | 04 | Done: see runtime dependencies |
 | Supabase CLI | 04 | Done: see dev dependencies |
 | `vite` (direct) | 06 | License; exact pin (a transitive copy already exists via Vitest) |
 | `happy-dom` or `jsdom` | 06 | License; exact pin |
 | `esbuild` | 04 (only if the Edge Function cannot import `src/core` directly) | License; exact pin |
 | Supabase free tier | 04 | Done: see "Supabase free tier (checked 2026-11-16)" below |
-| GitHub Pages / Actions limits | 05, 06 | Record current limits |
+| GitHub Actions limits | 05 | Done: see "GitHub Actions scheduling (checked 2026-11-16)" below |
+| GitHub Pages limits | 06 | Record current limits |
 
 ## GitHub Actions used
 
@@ -58,6 +59,8 @@ Last updated: 2026-11-16 (Task 04).
 |---|---|---|
 | `actions/checkout` | `3d3c42e5aac5ba805825da76410c181273ba90b1` (v7.0.1) | First-party |
 | `actions/setup-node` | `949feb2413d6458794dcd2491c4babbbce0c15c1` (v7.1.0) | First-party |
+
+Used by `ci.yml` and `send.yml`. `send.yml` also calls the GitHub REST API with `gh` (preinstalled on GitHub runners) for the keep-alive step; no extra action.
 
 ## Supabase free tier (checked 2026-11-16)
 
@@ -79,3 +82,22 @@ Sources: [pricing](https://supabase.com/pricing), [Auth rate limits](https://sup
 | Log retention | 1 day (API and database), 24 h auth audit logs | Our own `delivery_log` is the durable record |
 
 **Not checked / unverified:** the Supabase pricing page is a marketing page and plans can change; re-check before launch. Free-tier statements were read from official Supabase pages, not tested against a live project (none exists yet).
+
+## `web-push` (R-08, checked 2026-11-16)
+
+- **License: MPL-2.0**, not MIT as the brief said. MPL-2.0 is a free, open-source, file-level copyleft license. We use the package unmodified as a dependency, which carries no obligation for our own code. If we ever modified its files, those files would have to stay MPL-2.0 and be published.
+- **Maintenance:** 4.0.0 was published on 2026-11-06 (ten days before this check); the 3.6.x line had releases through 2024. Repository: `github.com/web-push-libs/web-push`. It is the standard Node library for Web Push. Considered maintained.
+- **Typings:** none shipped; `@types/web-push` is 3.6.4 (MIT) and lags 4.0.0, so it is not installed. A minimal declaration lives in `src/adapters/web-push/web-push.d.ts`.
+- **Its runtime dependencies** (from `package-lock.json`): `jws` 4.0.1, `jwa` 2.0.1, `asn1.js` 5.4.1, `bn.js` 4.12.5, `http_ece` 1.2.1, `https-proxy-agent` 9.1.0, `agent-base` 9.0.0, `debug` 4.4.3, `ms` 2.1.3, `safe-buffer` 5.2.1, `safer-buffer` 2.1.2 (all MIT); `inherits` 2.0.4 and `minimalistic-assert` 1.0.1 (ISC); `ecdsa-sig-formatter` 1.0.11 (Apache-2.0); `buffer-equal-constant-time` 1.0.1 (BSD-3-Clause). `npm audit`: 0 vulnerabilities.
+
+## GitHub Actions scheduling (checked 2026-11-16)
+
+Source: [events that trigger workflows: schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule) and [disabling and enabling a workflow](https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/disabling-and-enabling-a-workflow).
+
+| Item | Current rule | Our handling |
+|---|---|---|
+| Delay / drops | Scheduled runs can be delayed under load (worst at the start of each hour); under enough load queued jobs may be dropped | Cron at `:03` and `:33` (P-07); 2-hour lateness window (D-011); `sender_runs` heartbeat shows gaps |
+| Branch | Runs only on the default branch, using its latest commit | Content is always the merged `data/messages.json` |
+| Minimum interval | 5 minutes | We use 30 |
+| Auto-disable | In a public repository, scheduled workflows are disabled after 60 days without repository activity | Keep-alive step (P-11, unverified) + fallback in `docs/operations.md` 2.4 |
+| Minutes | Free for public repositories on standard runners (**ASSUMPTION**, see the runner row above) | About 1 minute per run, 48 runs a day |

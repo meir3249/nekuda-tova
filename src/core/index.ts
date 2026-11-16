@@ -1,6 +1,12 @@
 export type { Clock } from './ports/clock.ts'
 export type { ContentSource } from './ports/content-source.ts'
-export type { StoredPushSubscription, Subscription, UserRepository } from './ports/user-repository.ts'
+export type {
+  StoredPushSubscription,
+  Subscription,
+  SubscriptionLookup,
+  UserRepository,
+} from './ports/user-repository.ts'
+export type { PushOptions, PushPayload, PushResult, PushSender } from './ports/push-sender.ts'
 export type {
   DeliveryLog,
   DeliveryLogEntry,
@@ -38,6 +44,23 @@ export {
   type SettingsResult,
   type SettingsRow,
 } from './settings/apply-settings-change.ts'
+export {
+  MAX_BATCHES_PER_RUN,
+  runSendCycle,
+  tagForDate,
+  topicForTag,
+  type PlannedAction,
+  type SendCycleConfig,
+  type SendCycleDeps,
+  type SendCycleReport,
+} from './usecases/run-send-cycle.ts'
+export {
+  runTestPush,
+  TEST_PUSH_TAG,
+  type TestPushConfig,
+  type TestPushDeps,
+  type TestPushOutcome,
+} from './usecases/run-test-push.ts'
 export {
   detectEnvironment,
   type EnvInputs,

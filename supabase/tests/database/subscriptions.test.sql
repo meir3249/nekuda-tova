@@ -133,6 +133,14 @@ select is(public.finalize_skipped('00000000-0000-0000-0000-00000000000a',
 select is((select message_index from public.subscriptions where id = '00000000-0000-0000-0000-00000000000a'),
   11::bigint, 'finalize_skipped does not change the counter');
 
+-- Millisecond-precision CAS (migration 0004): the sender only knows milliseconds.
+update public.subscriptions set next_send_at = '2027-01-13T07:00:00.123456Z'
+ where id = '00000000-0000-0000-0000-00000000000a';
+select is(public.finalize_skipped('00000000-0000-0000-0000-00000000000a',
+  '2027-01-13T07:00:00.123Z', '2027-01-13T07:00:00Z'), true, 'CAS matches a microsecond value read back at ms precision');
+select is(public.finalize_skipped('00000000-0000-0000-0000-00000000000a',
+  '2027-01-13T07:00:00.001Z', '2027-01-14T07:00:00Z'), false, 'CAS still rejects a different millisecond');
+
 -- A disabled row can never be finalized (user disabled mid-run).
 select is(public.finalize_sent('00000000-0000-0000-0000-00000000000b',
   '2027-01-11T07:00:00Z', '2027-01-12T07:00:00Z'), false, 'disabled row: finalize returns false');

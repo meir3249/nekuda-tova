@@ -1,5 +1,5 @@
 import type { Clock } from '../../src/core/ports/clock.ts'
-import type { Subscription, UserRepository } from '../../src/core/ports/user-repository.ts'
+import type { Subscription, SubscriptionLookup, UserRepository } from '../../src/core/ports/user-repository.ts'
 
 const copy = (s: Subscription): Subscription => ({
   ...s,
@@ -10,7 +10,7 @@ const copy = (s: Subscription): Subscription => ({
 })
 
 /** In-memory UserRepository with the same semantics as the Supabase adapter will have. */
-export class InMemoryUserRepository implements UserRepository {
+export class InMemoryUserRepository implements UserRepository, SubscriptionLookup {
   private readonly rows = new Map<string, Subscription>()
 
   constructor(private readonly clock: Clock) {}
@@ -22,6 +22,11 @@ export class InMemoryUserRepository implements UserRepository {
   get(id: string): Subscription | undefined {
     const r = this.rows.get(id)
     return r ? copy(r) : undefined
+  }
+
+  getById(id: string): Promise<Subscription | null> {
+    const r = this.rows.get(id)
+    return Promise.resolve(r ? copy(r) : null)
   }
 
   size(): number {

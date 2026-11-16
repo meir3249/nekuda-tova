@@ -118,6 +118,7 @@ None beyond D-xxx above. Any assumption in the specs is labeled `ASSUMPTION` and
 | 2026-11-16 | Task 01 implemented. TypeScript pinned to 6.0.3 (not 7.0.2) because `typescript-eslint` 8.73.0 peers `<6.1.0`. Relative imports use explicit `.ts` extensions (Node 24 type stripping, no extra runner). ESLint covers bare/`node:` imports and infra paths in core; the boundary test is authoritative for escaping relative paths. Local CI green; GitHub CI not yet run (no remote). | Spec 01 |
 | 2026-11-16 | Task 02 implemented: content schema v1, pure validator and diff in `src/core/content`, `RepoFileContentSource`, `validate-content` and `check-content-diff` scripts, CI content steps, `docs/content-management.md`, 12 Hebrew **placeholder** messages. Refinements recorded in spec 02 (INVALID_MESSAGE, RETIRED_ID_DROPPED, COUNT_CHANGED on any N change). P-10 implemented as approved. | Spec 02 |
 | 2026-11-16 | User approved all specs, repo structure, task order, P-01..P-15; answered Q-01..Q-06 (Hebrew + RTL, `nekuda-tova`, Frankfurt, placeholder icon, I draft copy). Phase 4 started. | Phase 3 gate passed |
+| 2026-11-16 | Task 04 verified against the local stack and committed. Task 05 implemented: sender, `web-push` 4.0.0 (MPL-2.0, R-08 resolved), `send.yml`, migration 0004 (CAS precision fix). See section 10. | Spec 05 |
 
 ## 8. Task 03 implementation notes (2026-11-16)
 
@@ -148,3 +149,31 @@ Choices made while implementing (flagged for review):
 **Bundling decision (R-09):** the function imports `src/core` and `src/adapters/supabase` by relative path (no `esbuild` added). **Unverified:** I could not run `supabase functions serve/deploy` (Docker daemon not running, no project yet), so whether the CLI bundler follows those imports is still an assumption. The handler itself is fully tested under Vitest. Fallback if deploy fails: bundle `src/core` with `esbuild` (needs approval to add the dependency).
 
 **Not executed in this environment:** `supabase/tests/database/subscriptions.test.sql`, the two-connection claim concurrency check, the idempotent double `db reset`, and anything against a real Supabase project. See `docs/operations.md` section 1.5 and 1.6.
+
+**Update (Task 05 session, 2026-11-16):** with Docker running, `supabase db reset` applied all migrations, `supabase test db` passed (46 tests at the time, 48 after migration 0004), and `supabase functions serve settings` loaded the function in the edge runtime with its relative imports (OPTIONS 204, unauthenticated GET 401). So the relative-import bundling assumption holds for the local runtime; `functions deploy` to a real project is still unverified. The two-connection concurrency check (operations 1.6) is still manual and not executed.
+
+## 10. Task 05 implementation notes (2026-11-16)
+
+Status of proposals touched by this task:
+- **P-04 (audit columns, heartbeat):** every run writes a `sender_runs` row (also when nobody is due, and for `aborted_invalid_content` and `error`). `delivery_log.run_id` and `message_id` are filled; no message text is stored.
+- **P-05 (lease + CAS, tag/topic):** claims use a 900 s lease; finalize is compare-and-set. Notification `tag` is `ntk-<local date of the slot>`; the Web Push `Topic` is a deterministic 17-character hash of the tag. Residual risk stays as specified: a crash after the push service accepted but before finalize can resend within the window; identical tag/topic make it replace rather than stack.
+- **P-06:** TTL 3600 s, urgency `normal` (constants in `src/sender/config.ts`).
+- **P-07:** cron `3,33 * * * *`.
+- **P-08:** the web-push adapter re-checks every endpoint (HTTPS, no credentials, allowlisted host) before any request.
+- **P-11 (keep-alive):** implemented as a final `PUT .../actions/workflows/send.yml/enable` step on scheduled runs. **Not verified**: the repository has no GitHub remote yet, so no workflow has run. Fallback documented in `docs/operations.md` 2.4.
+
+Choices made while implementing (flagged for review):
+1. **Bug found and fixed: CAS precision (migration 0004).** The local integration run showed `finalize_sent`/`finalize_skipped` returning false for rows whose `next_send_at` has microseconds (Postgres keeps microseconds, a JS `Date` keeps milliseconds). Rows written by the settings function are minute-aligned so it would rarely bite, but any other writer (manual SQL, a future change) would leave the user stuck. Migration 0004 compares at millisecond precision on both sides; two pgTAP tests cover it. Migration 0003 is unchanged.
+2. **Failed pushes release their claim at the end of the run, not immediately.** Releasing immediately would let the next batch in the same run reclaim and retry the same user in a loop. Deferring keeps "retried by the next run" exact. Rows whose finalize raced are released the same way.
+3. **Bookkeeping never turns a delivered push into a failure.** If writing a `delivery_log` row, pruning, or releasing a claim fails, the run continues and counts it as `bookkeepingErrors` (shown in the summary). A fatal error (claiming fails, e.g. Supabase down) records an `error` run when possible and exits 1; leases expire on their own.
+4. **A claimed row with no subscription is marked expired** (defensive; the claim SQL already filters these out).
+5. **`--test-push` is a separate core use case (`runTestPush`) that receives no write port**, so by construction it cannot change the counter, the schedule, or the log. It uses the tag `ntk-test`, so it never replaces a real daily notification, and a 404/410 is reported but does not disable the user. It needs a read-only `SubscriptionLookup.getById` port (new, small).
+6. **A dry run needs no VAPID secrets** and wires a push sender that throws if called. It does not prune and does not write a `sender_runs` row (zero writes).
+7. **Public logs show user ids shortened to 8 characters.** Actions logs of a public repo are public; full anonymous ids are not needed to debug. Message text, endpoints and keys never appear; unexpected error messages pass through `redact` (secret values and any URL removed).
+8. **Workflow inputs are passed via environment variables**, never interpolated into the shell script. `test_push_user` takes precedence over `dry_run`. `npm ci --omit=dev --ignore-scripts` in the send job (no CLI binary download, no install scripts); verified locally that the sender runs from a runtime-only install.
+9. **Exit code for `--test-push`:** 0 only if the push service accepted; otherwise 1.
+10. **`web-push` typings:** the package ships none and `@types/web-push` (3.6.4) lags 4.0.0, so a minimal local declaration (`src/adapters/web-push/web-push.d.ts`) covers the three functions used.
+
+Verified in this environment: unit tests with fakes (core cycle, test push, sender CLI, web-push mapping), a full cycle against the local Supabase stack with the real repository and log adapters and a stubbed HTTP layer (sent / skipped_stale / failed rows and the run heartbeat written correctly, all claims released), a dry run against the local stack (zero writes, checked in the database), `actionlint` on both workflows.
+
+Not verified: a real push to a device (needs the PWA subscription from Task 07), the workflow on GitHub, the keep-alive step, observed cron delays.

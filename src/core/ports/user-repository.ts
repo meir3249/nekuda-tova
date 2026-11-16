@@ -22,6 +22,11 @@ export interface Subscription {
   updatedAt: Date
 }
 
+/** Read-only lookup of one row. Used only by the `--test-push` diagnostic; never by the send cycle. */
+export interface SubscriptionLookup {
+  getById(id: string): Promise<Subscription | null>
+}
+
 export interface UserRepository {
   /** Read-only (dry run). */
   peekDue(now: Date, limit: number): Promise<Subscription[]>

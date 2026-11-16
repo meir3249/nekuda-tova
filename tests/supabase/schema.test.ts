@@ -24,11 +24,12 @@ function tableColumns(source: string, table: string): { name: string; type: stri
 }
 
 describe('migrations', () => {
-  it('are ordered 0001 init, 0002 rls, 0003 functions', () => {
-    expect(files).toHaveLength(3)
+  it('are ordered 0001 init, 0002 rls, 0003 functions, 0004 finalize precision', () => {
+    expect(files).toHaveLength(4)
     expect(files[0]).toContain('init')
     expect(files[1]).toContain('rls')
     expect(files[2]).toContain('functions')
+    expect(files[3]).toContain('finalize_ms_precision')
   })
 
   it('are written to be re-runnable', () => {
@@ -102,5 +103,21 @@ describe('migrations', () => {
     const s = sql('functions')
     expect(s).toMatch(/for update skip locked/i)
     expect(s.match(/and next_send_at = p_expected/g)).toHaveLength(2)
+  })
+
+  it('0004 redefines both finalize functions as millisecond-precision CAS, locked to service_role', () => {
+    const s = sql('finalize_ms_precision')
+    const defs = [...s.matchAll(/create or replace function (public\.\w+)\(/g)].map((m) => m[1])
+    expect(defs).toEqual(['public.finalize_sent', 'public.finalize_skipped'])
+    for (const b of s.split(/create or replace function /).slice(1)) {
+      expect(b).toContain('security definer')
+      expect(b).toContain('set search_path = public')
+      expect(b).toContain("date_trunc('milliseconds', next_send_at) = date_trunc('milliseconds', p_expected)")
+      expect(b).toContain('and enabled')
+    }
+    for (const fn of ['finalize_sent', 'finalize_skipped']) {
+      expect(s).toContain(`revoke all on function public.${fn}(uuid, timestamptz, timestamptz) from public, anon, authenticated`)
+      expect(s).toContain(`grant execute on function public.${fn}(uuid, timestamptz, timestamptz) to service_role`)
+    }
   })
 })

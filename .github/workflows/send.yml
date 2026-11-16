@@ -1,0 +1,78 @@
+name: Send
+
+# Spec 05. Every 30 minutes at :03 and :33 (P-07). GitHub may start scheduled runs late or skip them;
+# the 2-hour lateness window (D-011) gives roughly four attempts per slot.
+on:
+  schedule:
+    - cron: '3,33 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run: show what would be sent; send and write nothing. Uncheck for a real send.'
+        type: boolean
+        default: true
+      test_push_user:
+        description: 'Optional user id (UUID): send that user their next message only. Changes nothing. Ignores dry run.'
+        type: string
+        default: ''
+
+# Never two senders at once; a queued run waits instead of cancelling the one in progress.
+concurrency:
+  group: nekuda-send
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write # only for the keep-alive step (P-11)
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Actions pinned by commit SHA (checkout v7.0.1, setup-node v7.1.0). Same pins as ci.yml.
+      # Scheduled runs always use the default branch, so data/messages.json is the merged content.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --omit=dev --ignore-scripts
+
+      - name: Send
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          # Inputs are passed as environment variables, never interpolated into the script (no injection).
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          INPUT_TEST_PUSH_USER: ${{ inputs.test_push_user }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ -n "$INPUT_TEST_PUSH_USER" ]; then
+              args+=(--test-push "$INPUT_TEST_PUSH_USER")
+            elif [ "$INPUT_DRY_RUN" != "false" ]; then
+              args+=(--dry-run)
+            fi
+          fi
+          node src/sender/main.ts "${args[@]}"
+
+      # P-11 / R-02: GitHub disables scheduled workflows after 60 days without repository activity.
+      # Re-enabling an enabled workflow is meant to reset that timer. ASSUMPTION until observed on a real repo;
+      # see docs/operations.md section 2.4 for the fallback. Runs even if the send step failed.
+      - name: Keep-alive
+        if: always() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api --method PUT "repos/$REPO/actions/workflows/send.yml/enable" --silent \
+            && echo "keep-alive: workflow re-enabled" \
+            || echo "::warning::keep-alive call failed; see docs/operations.md section 2.4"

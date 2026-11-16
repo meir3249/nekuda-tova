@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Subscription, UserRepository } from '../../core/ports/user-repository.ts'
+import type { Subscription, SubscriptionLookup, UserRepository } from '../../core/ports/user-repository.ts'
 import { toRepositoryError } from './errors.ts'
 import { rowToSubscription, type SubscriptionDbRow } from './rows.ts'
 
@@ -10,7 +10,7 @@ interface RpcResult {
 }
 
 /** `UserRepository` over the SQL functions in migration 0003. Uses the service-role client. */
-export class SupabaseUserRepository implements UserRepository {
+export class SupabaseUserRepository implements UserRepository, SubscriptionLookup {
   private readonly client: SupabaseClient
 
   constructor(client: SupabaseClient) {
@@ -75,5 +75,17 @@ export class SupabaseUserRepository implements UserRepository {
   async pruneInactive(olderThan: Date): Promise<number> {
     const data = await this.rpc('prune_inactive', { p_cutoff: olderThan.toISOString() })
     return typeof data === 'number' ? data : 0
+  }
+
+  /** Read-only single-row lookup for the --test-push diagnostic (service role only). */
+  async getById(id: string): Promise<Subscription | null> {
+    let res: RpcResult
+    try {
+      res = (await this.client.from('subscriptions').select('*').eq('id', id).maybeSingle()) as RpcResult
+    } catch (e) {
+      throw toRepositoryError({ message: e instanceof Error ? e.message : 'request failed' }, 0)
+    }
+    if (res.error) throw toRepositoryError(res.error, res.status)
+    return res.data ? rowToSubscription(res.data as SubscriptionDbRow) : null
   }
 }
