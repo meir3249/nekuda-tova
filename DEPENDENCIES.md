@@ -2,7 +2,7 @@
 
 Every dependency, with its exact version, license (read from the installed `package.json`, not from memory), purpose, and any free-tier limit. Nothing here costs money (D-009). Anything not listed needs approval before it is added.
 
-Last updated: 2026-11-16 (Task 05).
+Last updated: 2026-11-16 (Task 06).
 
 ## Runtime and tooling
 
@@ -18,6 +18,8 @@ Last updated: 2026-11-16 (Task 05).
 |---|---|---|---|
 | `typescript` | 6.0.3 | Apache-2.0 | Language, type checking, `preProcessFile` for the boundary test |
 | `vitest` | 5.1.0 | MIT | Test runner |
+| `vite` | 8.3.8 | MIT | PWA build and dev server (P-12). Same version Vitest already used, so it is deduplicated. Uses `lightningcss` (MPL-2.0, build tool only, see below) for CSS. |
+| `happy-dom` | 21.0.4 | MIT | DOM for the PWA screen tests. Its dependencies: `whatwg-mimetype`, `ws`, `@types/ws`, `@types/whatwg-mimetype` (MIT), `entities` (BSD-2-Clause) |
 | `eslint` | 10.15.0 | MIT | Linting, core import restrictions |
 | `@eslint/js` | 10.0.1 | MIT | ESLint recommended rules |
 | `typescript-eslint` | 8.73.0 | MIT | TypeScript lint rules |
@@ -46,12 +48,10 @@ Last updated: 2026-11-16 (Task 05).
 |---|---|---|
 | `@supabase/supabase-js` | 04 | Done: see runtime dependencies |
 | Supabase CLI | 04 | Done: see dev dependencies |
-| `vite` (direct) | 06 | License; exact pin (a transitive copy already exists via Vitest) |
-| `happy-dom` or `jsdom` | 06 | License; exact pin |
 | `esbuild` | 04 (only if the Edge Function cannot import `src/core` directly) | License; exact pin |
 | Supabase free tier | 04 | Done: see "Supabase free tier (checked 2026-11-16)" below |
 | GitHub Actions limits | 05 | Done: see "GitHub Actions scheduling (checked 2026-11-16)" below |
-| GitHub Pages limits | 06 | Record current limits |
+| GitHub Pages limits | 06 | Done: see "GitHub Pages (checked 2026-11-16)" below |
 
 ## GitHub Actions used
 
@@ -60,7 +60,10 @@ Last updated: 2026-11-16 (Task 05).
 | `actions/checkout` | `3d3c42e5aac5ba805825da76410c181273ba90b1` (v7.0.1) | First-party |
 | `actions/setup-node` | `949feb2413d6458794dcd2491c4babbbce0c15c1` (v7.1.0) | First-party |
 
-Used by `ci.yml` and `send.yml`. `send.yml` also calls the GitHub REST API with `gh` (preinstalled on GitHub runners) for the keep-alive step; no extra action.
+| `actions/upload-pages-artifact` | `fc324d3547104276b827a68afc52ff2a11cc49c9` (v5.0.0) | First-party (`pages.yml`) |
+| `actions/deploy-pages` | `368f82528645a54fb793d4d04e342629a3f51346` (v5.0.1) | First-party (`pages.yml`) |
+
+checkout and setup-node are used by `ci.yml`, `send.yml` and `pages.yml`; the Pages SHAs were read with `git ls-remote` on 2026-11-16 (lightweight tags, so the SHA is the commit). `send.yml` also calls the GitHub REST API with `gh` (preinstalled on GitHub runners) for the keep-alive step; no extra action.
 
 ## Supabase free tier (checked 2026-11-16)
 
@@ -101,3 +104,21 @@ Source: [events that trigger workflows: schedule](https://docs.github.com/en/act
 | Minimum interval | 5 minutes | We use 30 |
 | Auto-disable | In a public repository, scheduled workflows are disabled after 60 days without repository activity | Keep-alive step (P-11, unverified) + fallback in `docs/operations.md` 2.4 |
 | Minutes | Free for public repositories on standard runners (**ASSUMPTION**, see the runner row above) | About 1 minute per run, 48 runs a day |
+
+## Shipped in the PWA bundle (Task 06)
+
+Only `@supabase/supabase-js` (MIT) and its helpers, including `tslib` 2.8.1 (**0BSD**, a permissive license without an attribution requirement), plus our own code. The bundle is about 226 kB (60 kB gzipped), almost all supabase-js. Lockfile license totals after Task 06: 158 MIT, 16 Apache-2.0, 8 ISC, 7 BSD-2-Clause, 6 0BSD, 3 BSD-3-Clause, 2 BlueOak-1.0.0, 13 MPL-2.0. The 13 MPL-2.0 entries are `web-push` plus `lightningcss` and its 11 per-platform binaries (only one is installed). Nothing paid or proprietary.
+
+**Font: Rubik** (Rubik Project Authors, **SIL Open Font License 1.1**, free, redistribution allowed with the license). Downloaded once from Google Fonts (v31, variable weight 400–600, Hebrew 9 kB + Latin 35 kB woff2) and self-hosted in `src/pwa/public/fonts/` with `OFL.txt` alongside. Served from the app's own origin, so users' browsers never contact Google (privacy rule and CSP in spec 06).
+
+## GitHub Pages (checked 2026-11-16)
+
+Source: [GitHub Pages limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits).
+
+| Item | Limit | Our usage |
+|---|---|---|
+| Published site size | 1 GB | About 240 kB |
+| Bandwidth | 100 GB per month (soft) | Tiny static files, cached by the service worker |
+| Deployment time | 10 minutes | Under a minute |
+| Builds | 10 per hour (soft), not applied to custom Actions workflows | We use a custom workflow |
+| Use policy | Not for commercial transactions or sensitive data such as passwords | A free, non-commercial settings page; no passwords |

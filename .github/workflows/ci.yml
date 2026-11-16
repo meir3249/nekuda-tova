@@ -24,6 +24,10 @@ jobs:
       - run: npm test
       - run: npm run test:boundary
       - run: npm run validate:content
+      - name: Build PWA (no backend config needed; checks the build itself)
+        run: npm run build:pwa
+      - name: Secrets scan over the built PWA
+        run: npx vitest run tests/boundary/pwa-secrets.test.ts
       - name: Content change impact (pull requests only)
         if: github.event_name == 'pull_request'
         env:

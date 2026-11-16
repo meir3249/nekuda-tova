@@ -119,6 +119,7 @@ None beyond D-xxx above. Any assumption in the specs is labeled `ASSUMPTION` and
 | 2026-11-16 | Task 02 implemented: content schema v1, pure validator and diff in `src/core/content`, `RepoFileContentSource`, `validate-content` and `check-content-diff` scripts, CI content steps, `docs/content-management.md`, 12 Hebrew **placeholder** messages. Refinements recorded in spec 02 (INVALID_MESSAGE, RETIRED_ID_DROPPED, COUNT_CHANGED on any N change). P-10 implemented as approved. | Spec 02 |
 | 2026-11-16 | User approved all specs, repo structure, task order, P-01..P-15; answered Q-01..Q-06 (Hebrew + RTL, `nekuda-tova`, Frankfurt, placeholder icon, I draft copy). Phase 4 started. | Phase 3 gate passed |
 | 2026-11-16 | Task 04 verified against the local stack and committed. Task 05 implemented: sender, `web-push` 4.0.0 (MPL-2.0, R-08 resolved), `send.yml`, migration 0004 (CAS precision fix). See section 10. | Spec 05 |
+| 2026-11-16 | Task 05 committed. Task 06 implemented: PWA shell, settings screen, service worker, `pages.yml`. Q-05 copy drafted for review. See section 11. | Spec 06 |
 
 ## 8. Task 03 implementation notes (2026-11-16)
 
@@ -177,3 +178,40 @@ Choices made while implementing (flagged for review):
 Verified in this environment: unit tests with fakes (core cycle, test push, sender CLI, web-push mapping), a full cycle against the local Supabase stack with the real repository and log adapters and a stubbed HTTP layer (sent / skipped_stale / failed rows and the run heartbeat written correctly, all claims released), a dry run against the local stack (zero writes, checked in the database), `actionlint` on both workflows.
 
 Not verified: a real push to a device (needs the PWA subscription from Task 07), the workflow on GitHub, the keep-alive step, observed cron delays.
+
+## 11. Task 06 implementation notes (2026-11-16)
+
+Status of proposals and questions touched by this task:
+- **P-12 (vanilla TypeScript + Vite):** implemented. No UI or CSS framework. `vite` 8.3.8 and `happy-dom` 21.0.4 added (MIT, see `DEPENDENCIES.md`).
+- **P-13 (default 09:00):** implemented (cache default and the pre-rendered `selected` option).
+- **P-15 (off by default, no row until the first change):** implemented. Opening the app creates no session and no row; the first time change does.
+- **Q-01 (Hebrew, RTL):** UI, manifest (`lang: he`, `dir: rtl`) and notification fallback title are Hebrew. Product name only in `strings.appName` (tested).
+- **Q-02 (`nekuda-tova`):** the base path comes from the repository name in `pages.yml`; `/nekuda-tova/` was used for local verification.
+- **Q-04 (icon):** generated placeholder: a warm dot (a "point") on a light background, `scripts/generate-icons.ts`.
+- **Q-05 ("How it works" copy):** **draft in Hebrew, awaiting your review**, in `src/pwa/strings.ts` (`howItWorks`, four short paragraphs). The last paragraph states exactly what is stored; please check it against the privacy note in Task 08.
+
+Choices made while implementing (flagged for review):
+1. **Static text at first paint.** `index.html` is a template; the build fills it from `strings.ts` and pre-renders the 48 options (24-hour `HH:MM` labels), so the first paint is complete before JavaScript runs. JavaScript then only applies cached values.
+2. **Content-Security-Policy** in the built HTML: `'self'` plus the Supabase origin only, no inline script or style. This enforces "no third-party requests" in the browser, not just by review. The dev server has no CSP (Vite's HMR is inline).
+3. **Service worker built separately** as a classic, self-contained `sw.js` at the base root, with the precache list and a content hash injected. Cache-first app shell; only same-origin precached files are served from cache; Supabase is never intercepted. A minimal push handler is included (payload v1, title-only fallback, never silent) so `--test-push` can be tried as soon as Task 07 subscribes; Task 07 owns and finishes it.
+4. **Saving always sends the current time and timezone**, plus whatever changed, because a first save creates the row and the server requires both. Patches are debounced 400 ms and coalesced; a change made during an in-flight request is sent after it.
+5. **Retry policy.** `NETWORK`, `INTERNAL`, `UNAUTHORIZED`, 429 and 5xx keep the change pending (saved in `ntk.pending.v1`) and retry on `online` and on the next open. Other errors (bad request, capacity reached) drop that change and show a calm line; capacity has its own wording. A pending change wins over the server state on the next open.
+6. **Feature flag `PUSH_FLOW_ENABLED = false`** (`src/pwa/config.ts`). Turning the switch on explains "coming soon" and returns it to off; nothing is saved. A cached or server `enabled: true` is shown as off while the flag is off. Task 07 removes the flag.
+7. **Timezone:** read on every open and sent with every save; the local cache keeps the device timezone. Re-saving automatically when only the timezone changed is left to Task 07's auto-follow rule.
+8. **Bundle size:** about 226 kB (60 kB gzipped), almost all `@supabase/supabase-js` (auth, functions, realtime, storage). It is loaded after first paint and cached by the service worker. Trimming it (for example, plain `fetch` calls to the auth endpoints) is possible but not done; tell me if you want it.
+9. **Type checking:** the main program now includes the DOM library; `sw.ts` is checked separately with the WebWorker library (`tsconfig.sw.json`), because the two libraries conflict.
+10. **Privacy link** goes to `docs/privacy.md` on GitHub; that file is Task 08, so the link 404s until then. The footer is omitted when no URL is configured.
+
+Verified: see `docs/verification/task-06-pwa-checklist.md`. In headless Chrome there were no installability errors, the service worker activated, an offline reload worked, and the only origins contacted were the app and Supabase. Not verified: the deployed Pages URL, real devices (Android, iOS), a real Supabase round trip, screen readers, 200% zoom.
+
+Design revision after your UI review (2026-11-16), now in spec 06 "Visual design":
+11. **"Cosmic ocean" visual design.** A single deep indigo/night-blue palette with a soft CSS gradient and two faint glows (no images, no blur filters), generous fluid spacing, rounded cards and controls, a small breathing "point" above the title (disabled under reduced motion). **Dark only:** the previous light/dark pair is dropped because the palette is the product's identity. Manifest, `theme-color` and the placeholder icons now use the same night blue.
+12. **24-hour time labels always** (`15:00`, never `3:00 PM`), independent of the browser locale; the locale dependency was removed.
+13. **Styled native select.** Kept native for keyboard, screen reader and mobile-picker support, restyled (no native chrome, large numerals, custom chevron). In Chromium with customizable selects the open list is a fully styled rounded panel; on other browsers and on phones the OS picker opens.
+14. **Toast instead of the inline status line.** Same live region, now fixed at the bottom, centred, 80% wide, rounded. Notices other than "Saved" now dismiss themselves after 6 s instead of staying; the pending change keeps retrying silently.
+
+Second review refinements (2026-11-16):
+15. **Rubik font, self-hosted.** You asked to import Rubik from Google Fonts. Loading it from Google's servers would send every visitor's IP address to Google and break the "no third-party requests" rule and the CSP, so the same font files (OFL 1.1, v31, Hebrew + Latin subsets, 44 kB) were downloaded once and are served from the app's own origin, precached for offline use. The visual result is identical. The system font stack stays as the fallback.
+16. **Picker label "שעת התראה", no helper text.** The "arrives around the time you chose" note moved into "How it works", stated honestly: sometimes a little after; more than 2 hours late means that day is skipped (D-011).
+17. **"How it works" open state:** a hairline under the header and a softer lifted tint behind the text.
+18. **Icons** show the screen's glowing orb (highlight, warm rim, soft halo) on the night-blue gradient; the maskable icon keeps the orb inside the safe zone.

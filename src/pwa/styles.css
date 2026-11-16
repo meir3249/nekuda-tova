@@ -1,0 +1,515 @@
+/* "Cosmic ocean": one calm, deep night-blue screen (spec 06, Visual design).
+   CSS only: no images, no blur filters; one self-hosted font. Logical properties so RTL/LTR is a text change.
+   Contrast (WCAG AA) for every text/UI pair is asserted in tests/pwa/contrast.test.ts over the hex tokens below. */
+/* Rubik (SIL OFL 1.1, src/pwa/public/fonts/OFL.txt), self-hosted: no request ever leaves the app's origin.
+   Variable weight 400–600; Hebrew and Latin subsets only, split like Google Fonts so each loads on demand. */
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/rubik-hebrew.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/rubik-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  /* Background gradient stops, darkest to lightest. */
+  --bg: #060a1c;
+  --bg-mid: #0d1636;
+  --bg-2: #1a2858;
+  /* The two soft glows layered on the gradient (drawn at 35% and 14% opacity). */
+  --glow: #3b4fa8;
+  --tide: #2dbec8;
+  /* Upper bound of the lightest painted background point (bg-2 + 35% glow). Contrast is tested against it. */
+  --bg-peak: #263777;
+
+  --surface: #121c45; /* cards */
+  --surface-raised: #1c2a66; /* select, picker, switch track */
+  --toast: #222f70;
+  --text: #eef1ff;
+  --muted: #aab4e0;
+  --border: #6c7cc0; /* control edges (≥ 3:1, WCAG 1.4.11) */
+  --hairline: #2b3a7a; /* decorative dividers only */
+  --accent: #7fe3d8; /* sea glass */
+  --accent-contrast: #061226;
+  --track-off: #1c2a66;
+  --star: #ffd58a;
+  --focus: #ffd58a;
+
+  --radius-lg: 1.75rem;
+  --radius-md: 1.125rem;
+  --radius-sm: 0.75rem;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background-color: var(--bg);
+}
+
+body {
+  margin: 0;
+  min-block-size: 100vh;
+  min-block-size: 100dvh;
+  color: var(--text);
+  font-family: 'Rubik', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The ocean: a fixed layer (not background-attachment: fixed, which iOS ignores), painted once. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 70% at 85% -10%, color-mix(in srgb, var(--glow) 35%, transparent), transparent 65%),
+    radial-gradient(90% 60% at 10% 110%, color-mix(in srgb, var(--tide) 14%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--bg-2) 0%, var(--bg-mid) 45%, var(--bg) 100%);
+}
+
+.screen {
+  display: grid;
+  gap: clamp(2.5rem, 7vh, 4rem);
+  max-inline-size: 36rem;
+  margin-inline: auto;
+  padding-block-start: max(clamp(3.5rem, 12vh, 7rem), env(safe-area-inset-top));
+  /* Room for the floating toast so it never covers the last element. */
+  padding-block-end: max(7rem, calc(env(safe-area-inset-bottom) + 6rem));
+  padding-inline: max(clamp(1.5rem, 6vw, 3rem), env(safe-area-inset-left)) max(clamp(1.5rem, 6vw, 3rem), env(safe-area-inset-right));
+}
+
+/* ---- Header ---- */
+
+.hero {
+  text-align: center;
+}
+
+/* The "point" (nekuda): a soft star that breathes slowly. Decorative. */
+.orb {
+  display: block;
+  inline-size: 3.25rem;
+  block-size: 3.25rem;
+  margin-inline: auto;
+  margin-block-end: 2rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #fff7e3 0%, var(--star) 38%, #e9a25f 78%);
+  box-shadow:
+    0 0 2rem 0.25rem color-mix(in srgb, var(--star) 40%, transparent),
+    0 0 5rem 1.5rem color-mix(in srgb, var(--star) 12%, transparent);
+  animation: breathe 8s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+}
+
+h1 {
+  font-size: clamp(2rem, 7vw, 2.625rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  margin-block: 0 0.75rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.125rem;
+}
+
+/* ---- Cards ---- */
+
+.card {
+  border-radius: var(--radius-lg);
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--surface) 92%, transparent),
+    color-mix(in srgb, var(--surface) 70%, transparent)
+  );
+  border: 1px solid color-mix(in srgb, var(--hairline) 70%, transparent);
+  box-shadow: 0 1.5rem 3rem -1.5rem rgb(0 0 0 / 0.6);
+}
+
+.controls {
+  display: grid;
+  gap: 2rem;
+  padding: clamp(1.5rem, 6vw, 2.25rem);
+}
+
+.field {
+  display: grid;
+  gap: 0.75rem;
+}
+
+label {
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+/* ---- Time picker: a native <select> (keyboard, screen readers and mobile pickers for free), dressed up. ---- */
+
+.select-wrap {
+  position: relative;
+  display: block;
+  max-inline-size: 15rem;
+}
+
+/* Chevron, pointing down in both directions. */
+.select-wrap::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 1.4rem;
+  inline-size: 0.55rem;
+  block-size: 0.55rem;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  inline-size: 100%;
+  min-block-size: 3.75rem;
+  margin: 0;
+  padding-block: 0.5rem;
+  padding-inline: 1.4rem 3.25rem;
+  font: inherit;
+  font-size: 1.625rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    border-color 200ms var(--ease),
+    box-shadow 200ms var(--ease);
+}
+
+select:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* The native option list (desktop Chrome/Firefox honor these; mobile shows the OS wheel/sheet). */
+option {
+  color: var(--text);
+  background: var(--surface-raised);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Browsers with customizable selects (Chromium 135+) get a fully styled, rounded floating list. */
+@supports (appearance: base-select) {
+  select,
+  ::picker(select) {
+    appearance: base-select;
+  }
+
+  select {
+    display: flex;
+    align-items: center;
+  }
+
+  select::picker-icon {
+    display: none;
+  }
+
+  ::picker(select) {
+    margin-block: 0.5rem;
+    padding: 0.5rem;
+    max-block-size: min(20rem, 50vh);
+    overflow-y: auto;
+    color: var(--text);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    box-shadow: 0 1.5rem 3rem -1rem rgb(0 0 0 / 0.7);
+  }
+
+  option {
+    padding-block: 0.6rem;
+    padding-inline: 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 1.125rem;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  option::checkmark {
+    display: none;
+  }
+
+  option:hover,
+  option:focus-visible {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+
+  option:checked {
+    color: var(--accent-contrast);
+    background: var(--accent);
+  }
+}
+
+/* ---- Notifications switch: a native checkbox with role="switch". ---- */
+
+.switch-field {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  padding-block-start: 2rem;
+  border-block-start: 1px solid var(--hairline);
+}
+
+.switch-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.switch-state {
+  color: var(--muted);
+  min-inline-size: 3.5rem;
+  text-align: end;
+}
+
+input[type='checkbox'][role='switch'] {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  position: relative;
+  flex: none;
+  inline-size: 3.5rem;
+  block-size: 2rem;
+  border-radius: 999px;
+  background: var(--track-off);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition:
+    background-color 250ms var(--ease),
+    border-color 250ms var(--ease);
+}
+
+/* Knob. */
+input[type='checkbox'][role='switch']::before {
+  content: '';
+  position: absolute;
+  inset-block-start: calc(50% - 0.625rem);
+  inset-inline-start: 0.25rem;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  border-radius: 50%;
+  background: var(--muted);
+  transition:
+    inset-inline-start 250ms var(--ease),
+    background-color 250ms var(--ease);
+}
+
+/* Enlarges the hit area to ≥ 44 px without changing the visual size. */
+input[type='checkbox'][role='switch']::after {
+  content: '';
+  position: absolute;
+  inset: -0.5rem;
+}
+
+input[type='checkbox'][role='switch']:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+input[type='checkbox'][role='switch']:checked::before {
+  inset-inline-start: calc(100% - 1.5rem);
+  background: var(--accent-contrast);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+/* ---- How it works ---- */
+
+.how {
+  overflow: hidden; /* keeps the tinted body inside the rounded corners */
+}
+
+.how summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-block-size: 2.75rem;
+  padding-block: 1.25rem;
+  padding-inline: clamp(1.5rem, 6vw, 2.25rem);
+  font-size: 1.125rem;
+  font-weight: 500;
+  list-style: none;
+  cursor: pointer;
+  border-radius: var(--radius-lg);
+}
+
+.how summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Disclosure chevron: down when closed, up when open. */
+.how summary::after {
+  content: '';
+  flex: none;
+  inline-size: 0.55rem;
+  block-size: 0.55rem;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: translateY(-25%) rotate(45deg);
+  transition: transform 250ms var(--ease);
+}
+
+.how[open] summary::after {
+  transform: translateY(25%) rotate(225deg);
+}
+
+/* Open: a hairline under the header and a softer, slightly lifted tint for the text. */
+.how[open] summary {
+  border-block-end: 1px solid var(--hairline);
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.how-body {
+  padding-block: 1.75rem;
+  padding-inline: clamp(1.5rem, 6vw, 2.25rem);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-raised) 55%, transparent),
+    color-mix(in srgb, var(--surface-raised) 30%, transparent)
+  );
+}
+
+.how p {
+  margin-block: 0 1.1rem;
+  color: var(--text);
+}
+
+.how p:last-child {
+  margin-block-end: 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+/* ---- Footer ---- */
+
+footer {
+  text-align: center;
+  font-size: 0.9375rem;
+}
+
+footer a {
+  display: inline-block;
+  min-block-size: 2.75rem;
+  padding-block: 0.6rem;
+  padding-inline: 1rem;
+  color: var(--muted);
+  text-underline-offset: 0.25em;
+  border-radius: 999px;
+}
+
+footer a:hover {
+  color: var(--text);
+}
+
+/* ---- Toast: the one polite live region, floating at the bottom, centred, 80% wide. ---- */
+
+.toast {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: max(1.5rem, calc(env(safe-area-inset-bottom) + 0.75rem));
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  inline-size: 80%;
+  max-inline-size: 32rem;
+  margin: 0 auto;
+  padding-block: 0.9rem;
+  padding-inline: 1.25rem;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--toast);
+  border: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 1.25rem 2.5rem -0.75rem rgb(0 0 0 / 0.65),
+    0 0 0 1px rgb(255 255 255 / 0.03) inset;
+  text-align: center;
+  line-height: 1.45;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(0.75rem);
+  transition:
+    opacity 300ms var(--ease),
+    transform 300ms var(--ease);
+}
+
+.toast::before {
+  content: '';
+  flex: none;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0.75rem color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---- Reduced motion: no transitions, no breathing, the toast simply appears. ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .toast {
+    transform: none;
+  }
+}

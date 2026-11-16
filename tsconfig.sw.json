@@ -1,0 +1,11 @@
+{
+  // The service worker runs in a WebWorker global scope, whose types conflict with the DOM library,
+  // so it is type-checked as its own program.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "WebWorker"],
+    "types": []
+  },
+  "include": ["src/pwa/sw.ts", "src/pwa/strings.ts"],
+  "exclude": []
+}

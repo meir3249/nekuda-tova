@@ -1,6 +1,6 @@
 # Operations
 
-This file grows with each task. Section 1 is the Supabase backend (Task 04); section 2 is the sender (Task 05).
+This file grows with each task. Section 1 is the Supabase backend (Task 04); section 2 is the sender (Task 05); section 3 is the PWA on GitHub Pages (Task 06).
 Nothing here costs money (D-009); see `DEPENDENCIES.md` for the limits that were checked.
 
 ## 1. Supabase
@@ -133,3 +133,35 @@ Scheduled runs are often a few minutes late and are sometimes skipped, especiall
 
 ### 2.6 Known residual risk
 If a run crashes after a push service accepted a message but before the database was updated, the next run within the window sends the same message again. The notification tag and Web Push topic are the same, so the second one replaces the first instead of stacking.
+
+## 3. PWA on GitHub Pages
+
+### 3.1 One-time setup
+1. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
+2. **Settings → Secrets and variables → Actions → Variables** (not Secrets: these values end up in the public bundle, by design):
+
+   | Variable | Value |
+   |---|---|
+   | `VITE_SUPABASE_URL` | `https://<ref>.supabase.co` |
+   | `VITE_SUPABASE_ANON_KEY` | The **publishable** key (`sb_publishable_...`) or the legacy anon key. **Never** the secret/service-role key |
+   | `VITE_VAPID_PUBLIC_KEY` | The VAPID **public** key from `npm run vapid:generate` (used from Task 07) |
+
+3. Set the Edge Function's allowed origin to the Pages origin (section 1.4): `ALLOWED_ORIGINS=https://<github-user>.github.io`. The origin has no path.
+
+`pages.yml` runs on every push to the default branch that touches the PWA, core, build scripts or dependencies, and on demand (**Actions → Pages → Run workflow**). It fails instead of publishing if `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` is missing. The base path is the repository name (`/nekuda-tova/` for Q-02), taken automatically. The privacy link points at `docs/privacy.md` on the default branch (that file is written in Task 08; until then the link is a 404).
+
+### 3.2 Local development
+```
+npm run dev:pwa                       # Vite dev server (no CSP, no service worker build)
+npm run build:pwa                     # full build into dist/ (app + sw.js)
+$env:PWA_BASE = "/nekuda-tova/"; npx vite preview   # serve dist/ like Pages
+```
+Without the `VITE_*` variables the app still builds and works on screen; saving shows the gentle "couldn't save" line and keeps the change pending. To save against the local Supabase stack, set `VITE_SUPABASE_URL=http://127.0.0.1:54321` and the local publishable key, and run the function with `ALLOW_LOCALHOST=true`.
+
+### 3.3 Updates and caching
+The service worker precaches the app shell (HTML, the hashed JS/CSS, manifest, icons). Every build changes `sw.js` (it embeds a hash of the output), so after a deploy the browser installs the new version in the background and the **next** open shows it. Supabase requests are never intercepted or cached.
+
+Clearing site data, or the browser evicting it, gives the device a new anonymous identity. The old row stays disabled or keeps sending to the old subscription until that subscription expires (404/410 disables it); disabled rows are deleted after 365 days (P-03).
+
+### 3.4 Placeholder icons
+`npm run icons:generate` rewrites `src/pwa/public/icons/*` (a warm dot on a light background, Q-04). To use a real icon, replace those files with the same names and sizes (192, 512, maskable 512 with the motif inside the central 80%, 180 for iOS, and an SVG favicon).

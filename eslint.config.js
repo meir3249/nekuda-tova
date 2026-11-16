@@ -48,6 +48,18 @@ export default tseslint.config(
     },
   },
   {
+    files: ['src/pwa/**/*.ts'],
+    languageOptions: {
+      globals: { ...globals.browser },
+    },
+  },
+  {
+    files: ['src/pwa/sw.ts'],
+    languageOptions: {
+      globals: { ...globals.serviceworker },
+    },
+  },
+  {
     files: ['src/core/**/*.ts'],
     languageOptions: {
       // Do not predeclare Node/browser globals in core.

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "lib": ["ES2023"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "types": ["node"],
@@ -17,5 +17,5 @@
     "noEmit": true
   },
   "include": ["src", "tests", "scripts", "supabase/functions", "*.config.ts"],
-  "exclude": ["supabase/functions/**/index.ts"]
+  "exclude": ["supabase/functions/**/index.ts", "src/pwa/sw.ts"]
 }

@@ -1,0 +1,71 @@
+name: Pages
+
+# Spec 06: builds the PWA and publishes it to GitHub Pages from the default branch.
+# Public build values come from repository *variables* (Settings > Secrets and variables > Actions > Variables),
+# never from secrets: everything in the bundle is readable by anyone.
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'src/pwa/**'
+      - 'src/core/**'
+      - 'scripts/build-pwa.ts'
+      - 'scripts/pwa-*.ts'
+      - 'vite.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time; a newer push waits rather than cancelling a deployment in progress.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # Only the default branch is published, even if the trigger list above names both main and master.
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Actions pinned by commit SHA (checkout v7.0.1, setup-node v7.1.0, upload-pages-artifact v5.0.0).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Build
+        env:
+          PWA_BASE: /${{ github.event.repository.name }}/
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
+          PWA_PRIVACY_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.repository.default_branch }}/docs/privacy.md
+          # Fail instead of publishing an app that cannot save.
+          PWA_REQUIRE_CONFIG: '1'
+        run: npm run build:pwa
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # deploy-pages v5.0.1
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346

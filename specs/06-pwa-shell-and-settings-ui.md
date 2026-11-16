@@ -12,28 +12,39 @@ Brief §3; hand-off Req 5, 6. D-003, D-004, D-012, D-017, P-12, P-13, P-15.
 Vite with root `src/pwa`, output `dist/`, `base = '/<REPO_NAME>/'` (Q-02, from env `PWA_BASE`). Vanilla TypeScript, no UI framework, no CSS framework. Service worker built as a separate entry (`sw.ts` → `sw.js` at the base path root so its scope covers the app). Public env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`.
 
 ### Manifest (`manifest.webmanifest`)
-`name` "Nekuda Tova", `short_name` same, `display: standalone`, `start_url` and `scope` = base, `background_color`/`theme_color` neutral, icons 192, 512 and maskable 512 (Q-04: generated simple placeholder unless the user provides one), `lang` per Q-01.
+`name` "Nekuda Tova", `short_name` same, `display: standalone`, `start_url` and `scope` = base, `background_color`/`theme_color` from the night-blue palette (Visual design), icons 192, 512 and maskable 512 (Q-04: generated simple placeholder unless the user provides one), `lang` per Q-01.
 
 ### Screen layout (single page; no routing)
 Order top to bottom:
-1. Title (product name) and one calm line of subtitle from `strings`.
-2. **Time**: native `<select>` with 48 half-hour options (from core `SLOTS`), label "Time". Display uses `Intl.DateTimeFormat` for the user's locale (12/24 h) but the option **value** is always `"HH:MM"`. Default `09:00` until chosen (P-13). A native select is chosen over `<input type="time">` because step/half-hour behavior is inconsistent on mobile pickers.
+1. Title (product name) and one calm line of subtitle from `strings`, centred under a small decorative glowing "point" (`aria-hidden`).
+2. **Time**: native `<select>` with 48 half-hour options (from core `SLOTS`), label "Notification time" (`שעת התראה`), clear on its own: no helper text under the picker. Labels are **always 24-hour, zero-padded `HH:MM`** (e.g. `09:00`, `15:00`; never `3:00 PM`), whatever the browser locale (Israeli/European convention); the option **value** is the same `"HH:MM"`. Default `09:00` until chosen (P-13). A native select is kept (over `<input type="time">`, whose step/half-hour behavior is inconsistent on mobile, and over a custom listbox, which would lose native accessibility and mobile pickers) but styled as a custom component (see Visual design).
 3. **Notifications switch**: `<input type="checkbox" role="switch">` with a visible label and state text. Initial state off (P-15).
-4. **Status area** (`aria-live="polite"`, one line): gentle messages from Task 7 (permission denied, needs install, unsupported) and the tiny "Saved" confirmation.
-5. **How it works**: a `<details>` element (collapsed) with a short manifesto text from `strings` (Q-05) and an optional link slot for a future video (not shown now).
+   Items 2 and 3 sit together in one rounded card.
+4. **Status toast** (`role="status"`, `aria-live="polite"`): gentle messages from Task 7 (permission denied, needs install, unsupported), save failures and the tiny "Saved" confirmation. A floating toast, not an inline line (see Visual design).
+5. **How it works**: a `<details>` element (collapsed), styled as a rounded card with a chevron. When open, a hairline separates the header from the content, which sits on a softer, slightly lifted tint. Holds a short manifesto text, including the note that the message arrives around the chosen time (sometimes a little after; more than 2 h late means that day is skipped, D-011), from `strings` (Q-05) and an optional link slot for a future video (not shown now).
 6. Footer: link to privacy note (`docs/privacy.md` rendered or linked on GitHub).
 
 Not present: feed, history, accounts, streaks, scores, analytics, refresh button, sound settings, modals for sync, blocking loaders.
 
+### Visual design ("cosmic ocean")
+A relaxation product: the screen must feel calm, soft and spacious, never rigid or boxed in.
+- **Palette and atmosphere:** a single deep night-blue/indigo palette. The background is a smooth vertical gradient (indigo at the top fading to near-black navy) with two very soft radial glows (indigo at the top, a faint sea-teal at the bottom). CSS only: no images, no blur filters, painted on one fixed layer. Accent: soft sea-glass aqua; focus: warm starlight. All colours are tokens in `styles.css`; contrast is tested over every background point including the lightest painted one.
+- **Typography:** Rubik (SIL OFL 1.1; Hebrew + Latin subsets, variable weight 400–600) as the primary font, self-hosted under `public/fonts/` with `font-display: swap` and a preload of the Hebrew subset; the system UI font stack is the fallback.
+- **Breathing room:** generous, fluid spacing (`clamp()`); large top margin, wide gaps between sections, roomy card padding; content column up to 36 rem, centred.
+- **Softness:** rounded corners everywhere (cards ≈ 1.75 rem, controls ≈ 1.1 rem, pill switch and toast), soft shadows, hairline dividers instead of boxes, gentle eased transitions.
+- **Time picker:** the `<select>` has no native chrome (`appearance: none`): large tabular numerals, rounded raised fill, soft edge, custom chevron, hover glow. Where supported (Chromium customizable select, `appearance: base-select`) the open list is a rounded floating panel with rounded options and the chosen time highlighted in the accent; elsewhere the OS picker is used (mobile wheel/sheet), which is the accessible native behavior.
+- **Toast:** fixed at the bottom of the viewport (above the safe-area inset), centred on the X axis, 80% of the width (max 32 rem), rounded, raised indigo with a soft shadow and a small glowing accent dot. Appears with a short fade and rise; under `prefers-reduced-motion` it simply appears. "Saved" disappears after 2 s; other notices after 6 s (a pending save keeps retrying silently). The page reserves bottom padding so the toast never permanently hides content.
+- **Colour scheme:** dark only (`color-scheme: dark`); the cosmic palette is the product's identity, so there is no light variant. `theme-color` and the manifest colours match the gradient; placeholder icons show the same glowing orb (highlight, warm rim and a soft fading halo) on the night-blue gradient.
+
 ### Behavior
 - **Instant render:** HTML is static; JS reads cached settings from `localStorage` (`ntk.settings.v1`: time, timezone, enabled) and renders synchronously; first paint never waits for the network. If no cache, defaults apply.
 - **Reconcile in background:** after render, if a Supabase session already exists, `getSettings()` and update the UI silently if it differs. No spinner. If no session exists, nothing is created yet (P-15).
-- **Saving:** changing the time or the switch calls `saveSettings(patch)` (Task 4 API). Lazily `ensureSession()` on the first save. Changes are debounced 400 ms and coalesced; the control stays interactive. On success show "Saved" for 2 s (`aria-live`, respects `prefers-reduced-motion`; a fade, no motion). On failure show "Couldn't save just now. We'll try again." and keep a `pending` patch in `localStorage`, retried on `online` event and next app open. No technical detail shown.
+- **Saving:** changing the time or the switch calls `saveSettings(patch)` (Task 4 API). Lazily `ensureSession()` on the first save. Changes are debounced 400 ms and coalesced; the control stays interactive. On success show "Saved" in the toast for 2 s (respects `prefers-reduced-motion`). On failure show "Couldn't save just now. We'll try again." for 6 s and keep a `pending` patch in `localStorage`, retried on `online` event and next app open. No technical detail shown.
 - **Enabling in Task 6** (before Task 7) is disabled with a short explanation only if push is unavailable; the full flow is Task 7. During Task 6 acceptance, the switch saves `enabled=false` only; the enabling path is gated behind a feature flag removed in Task 7.
 - **Timezone:** `Intl.DateTimeFormat().resolvedOptions().timeZone` read on every open and sent with settings (auto-follow rule completed in Task 7).
 - **Service worker** (`sw.ts`): handles `push` and `install/activate` (`skipWaiting`, `clients.claim`). No fetch caching beyond a minimal app-shell precache for installability (static assets only; never caches Supabase calls). The `push` handler is specified fully in Task 7. There is **no** `notificationclick` handler beyond closing the notification (`event.notification.close()`) and no `clients.openWindow`/`focus` (D-017).
-- **Accessibility:** labels bound to controls, visible focus, ≥ 4.5:1 contrast, touch targets ≥ 44 px, supports 200% text zoom, honors `prefers-reduced-motion` and `prefers-color-scheme` (light/dark), `lang` attribute set; RTL deferred pending Q-01 but styles use logical properties (`margin-inline`, etc.) so RTL is a text change only. Full WCAG conformance requires manual testing with assistive technologies and expert review; this spec only commits to the checklist above.
-- **Privacy:** no third-party requests, no analytics, no remote fonts. Only calls: GitHub Pages assets and Supabase.
+- **Accessibility:** labels bound to controls, visible focus, ≥ 4.5:1 contrast, touch targets ≥ 44 px, supports 200% text zoom, honors `prefers-reduced-motion` (no transitions, no breathing animation), a single dark colour scheme (see Visual design), `lang`/`dir` set (Hebrew RTL, Q-01); styles use logical properties (`margin-inline`, etc.) so the direction is a text change only. Full WCAG conformance requires manual testing with assistive technologies and expert review; this spec only commits to the checklist above.
+- **Privacy:** no third-party requests, no analytics, no fonts loaded from a third party (Rubik is self-hosted). Only calls: GitHub Pages assets and Supabase.
 
 ### Deploy `.github/workflows/pages.yml`
 On push to default branch: `npm ci`, `build:pwa` (with public env from repository **variables**, not secrets), upload artifact, `actions/deploy-pages`. Permissions `pages: write`, `id-token: write`. `docs/operations.md` explains enabling Pages (source: GitHub Actions). Costs: none (public repo).
@@ -50,7 +61,7 @@ Tasks 01, 03, 04. New packages: `vite` (dev). Optional `jsdom` or `happy-dom` (d
 ## Acceptance criteria
 1. Lighthouse-style PWA installability checks pass (manifest, service worker, HTTPS, icons) on the deployed Pages URL; installs on Android Chrome and shows "Add to Home Screen" capability on iOS Safari.
 2. The screen is interactive immediately; no loader is ever shown; with the network off, the screen renders and the control values are editable.
-3. The select offers exactly 48 options, only `:00` and `:30`.
+3. The select offers exactly 48 options, only `:00` and `:30`, labelled in 24-hour `HH:MM`.
 4. Changing the time saves to Supabase (row visible via `settings` GET) and shows "Saved"; failure keeps a pending patch and retries on reconnect.
 5. No `notificationclick` navigation exists in `sw.js` (checked by a test that scans the built worker for `openWindow`, `focus(`, `navigate(`).
 6. No requests to third-party origins (checked in a headless test or documented network review).
@@ -58,7 +69,7 @@ Tasks 01, 03, 04. New packages: `vite` (dev). Optional `jsdom` or `happy-dom` (d
 8. Pages deploy workflow publishes the app from the default branch.
 
 ## Unit tests
-Time select options and value mapping (12/24 h display, `"HH:MM"` values); cache read/write and corruption tolerance (invalid JSON in `localStorage` → defaults); save queue debounce/coalesce/retry; status messages; strings completeness (no missing keys, no product name in anything designated as a message body).
+Time select options and value mapping (always 24-hour `HH:MM` labels equal to the values, no AM/PM); cache read/write and corruption tolerance (invalid JSON in `localStorage` → defaults); save queue debounce/coalesce/retry; status toast messages and auto-dismiss; palette contrast over every background token; strings completeness (no missing keys, no product name in anything designated as a message body).
 
 ## Integration tests
 DOM test (`happy-dom`/`jsdom`): render with and without cache; save success/failure with a fake `settings-api`; manual: install and use offline.
