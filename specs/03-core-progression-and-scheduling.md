@@ -14,7 +14,7 @@ messageIndexFor(startIndex: number, counter: number, n: number): number
 ```
 - Definition (0-based): `index = (startIndex + counter) mod n`, result in `[0, n-1]`.
 - Preconditions: `n` integer ≥ 1; `startIndex`, `counter` non-negative safe integers; `startIndex + counter ≤ Number.MAX_SAFE_INTEGER`. Violation → `RangeError` (programmer error; the sender treats it as a run error for that user, never as a skip of the whole run).
-- `counter` is never reduced by modulo anywhere; `n` is read from the content at send time. Example: `n=41`, `start=0`, `counter=562` → `562 mod 41 = 7` → index 7.
+- `counter` is never reduced by modulo anywhere; `n` is read from the content at send time. Example: `n=41`, `start=0`, `counter=562` → `562 mod 41 = 29` → index 29. (Corrected during implementation: the original text said 7, an arithmetic error.)
 - `randomStartIndex(rng: () => number): number` returns an integer in `[0, 2^31-1]` from an injected `rng` (`Math.random`-compatible, `[0,1)`).
 
 ### Slots (`src/core/scheduling/slots.ts`)
@@ -84,7 +84,7 @@ detectEnvironment(i: EnvInputs): { state: EnvState; isIOSLike: boolean; permissi
 Task 01. Task 02 types only for `Message` count `n` (not imported by progression).
 
 ## Acceptance criteria
-1. `messageIndexFor(0, 562, 41) === 7`; `(start=40, counter=562, n=41)` → `(602) mod 41 = 28`; counters up to `2^40` remain correct; `n=1` always 0.
+1. `messageIndexFor(0, 562, 41) === 29`; `(start=40, counter=562, n=41)` → `(602) mod 41 = 28`; counters up to `2^40` remain correct; `n=1` always 0.
 2. Pause/resume: a scenario test applies disable → N calendar days elapse → enable, and asserts `messageIndex` unchanged and the next message equals the one that would have been next before pausing.
 3. All DST tests in the matrix below pass.
 4. Staleness boundaries: 7199 s, 7200 s → send; 7201 s → stale.

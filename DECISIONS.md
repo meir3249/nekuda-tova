@@ -14,7 +14,7 @@ Status legend: **Approved** (user said so explicitly) · **Proposed** (written i
 | 1 Discovery | Done |
 | 2 Plan (PWA + Supabase + GitHub Actions) | **Approved** by user (D-010 and refinements D-011..D-014) |
 | 3 Specifications (`specs/`) | **Approved** by user on 2026-11-16 (repo structure, 8 task specs, order, acceptance criteria, P-01..P-15) |
-| 4 Implementation | **In progress.** Task 01 started. Tasks 02..08 pending. |
+| 4 Implementation | **In progress.** Tasks 01, 02 done (02 committed locally). Task 03 implemented, awaiting review. Tasks 04..08 pending. |
 
 ---
 
@@ -118,3 +118,11 @@ None beyond D-xxx above. Any assumption in the specs is labeled `ASSUMPTION` and
 | 2026-11-16 | Task 01 implemented. TypeScript pinned to 6.0.3 (not 7.0.2) because `typescript-eslint` 8.73.0 peers `<6.1.0`. Relative imports use explicit `.ts` extensions (Node 24 type stripping, no extra runner). ESLint covers bare/`node:` imports and infra paths in core; the boundary test is authoritative for escaping relative paths. Local CI green; GitHub CI not yet run (no remote). | Spec 01 |
 | 2026-11-16 | Task 02 implemented: content schema v1, pure validator and diff in `src/core/content`, `RepoFileContentSource`, `validate-content` and `check-content-diff` scripts, CI content steps, `docs/content-management.md`, 12 Hebrew **placeholder** messages. Refinements recorded in spec 02 (INVALID_MESSAGE, RETIRED_ID_DROPPED, COUNT_CHANGED on any N change). P-10 implemented as approved. | Spec 02 |
 | 2026-11-16 | User approved all specs, repo structure, task order, P-01..P-15; answered Q-01..Q-06 (Hebrew + RTL, `nekuda-tova`, Frankfurt, placeholder icon, I draft copy). Phase 4 started. | Phase 3 gate passed |
+
+## 8. Task 03 implementation notes (2026-11-16)
+
+- **Indexing convention:** 0-based. `index = (startIndex + counter) mod n`, in `[0, n-1]`. The counter is never reduced; `n` is read at send time. Spec example corrected: `562 mod 41 = 29` (the spec originally said 7).
+- **DST gap/overlap rule (D-014), implemented in `localToInstant`:** ambiguous local time (fall back) returns the earlier (first) instant; nonexistent local time (spring forward) returns the transition instant, i.e. the first instant whose local wall time is at or after the requested time. Verified against runtime ICU data for Asia/Jerusalem, America/New_York, Australia/Lord_Howe (30-minute shift), Asia/Kolkata, Asia/Kathmandu, Pacific/Kiritimati, Pacific/Pago_Pago, UTC (see `tests/core/scheduling/next-send.test.ts`).
+- **P-14 status:** implemented as specified. No once-per-day guard; a re-enable or time change computes the next strictly-upcoming occurrence (covered by a test).
+- **Settings:** `applySettingsChange` takes an optional fifth parameter, the push endpoint allowlist (default `DEFAULT_PUSH_ENDPOINT_ALLOWLIST`, P-08), so the allowlist stays data. A subscription is validated only when the resulting state is enabled. Disabling always clears the stored subscription.
+- **Timezone validity:** IANA-style names only (contains `/`, or `UTC`). Names such as `EST` or `EST5EDT` are rejected by design.
