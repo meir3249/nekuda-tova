@@ -7,10 +7,10 @@ export const strings = {
   appName: PRODUCT_NAME,
   subtitle: 'מחשבה קטנה וטובה, פעם ביום.',
 
-  timeLabel: 'שעת התראה',
+  timeLabel: 'שעת ההתראה',
 
   notificationsLabel: 'התראות',
-  notificationsOn: 'פועלות',
+  notificationsOn: 'פעילות',
   notificationsOff: 'כבויות',
   notificationsOffHint: 'כל עוד ההתראות כבויות, לא יגיעו אליך הודעות.',
 
@@ -18,7 +18,18 @@ export const strings = {
   saveFailed: 'לא הצלחנו לשמור כרגע. ננסה שוב.',
   saveRejected: 'לא הצלחנו לשמור את השינוי הזה.',
   capacityReached: 'אי אפשר להצטרף כרגע. אפשר לנסות שוב מאוחר יותר.',
-  pushComingSoon: 'הפעלת התראות תהיה זמינה בקרוב.',
+  enableFailed: 'לא הצלחנו להפעיל התראות כרגע. אפשר לנסות שוב.',
+  enableOffline: 'אין חיבור כרגע. אפשר לנסות שוב כשיהיה.',
+  permissionDenied: 'ההתראות כבויות בהגדרות המכשיר. אפשר להפעיל אותן שם בכל זמן.',
+  unsupported: 'הדפדפן הזה לא יכול לשלוח התראות. אולי דפדפן אחר יוכל.',
+
+  // iOS install sheet (Safari tab only): one heading, one sentence of steps, one muted line.
+  installHeading: 'באייפון, ההתראות מגיעות מהאפליקציה שבמסך הבית.',
+  installStepsBefore: 'מקישים על',
+  installShare: 'שיתוף',
+  installStepsAfter: ', אחר כך על ״הוספה למסך הבית״, ופותחים משם.',
+  installVersion: 'נדרשת גרסת iOS 16.4 ומעלה.',
+  installDismiss: 'לא עכשיו',
 
   howItWorksTitle: 'איך זה עובד',
   howItWorks: [
@@ -34,4 +45,13 @@ export const strings = {
 export type StringKey = keyof typeof strings
 
 /** Everything that can appear in the toast (Calm-space principle: one short, warm sentence each). */
-export const TOAST_KEYS = ['saved', 'saveFailed', 'saveRejected', 'capacityReached', 'pushComingSoon'] as const satisfies readonly StringKey[]
+export const TOAST_KEYS = [
+  'saved',
+  'saveFailed',
+  'saveRejected',
+  'capacityReached',
+  'enableFailed',
+  'enableOffline',
+  'permissionDenied',
+  'unsupported',
+] as const satisfies readonly StringKey[]

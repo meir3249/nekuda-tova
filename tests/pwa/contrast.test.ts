@@ -36,6 +36,13 @@ const PAIRS: [string, string, number][] = [
     ['focus', bg, 3],
   ]),
   ['text', 'toast', 4.5],
+  // Install sheet: a gradient from toast to surface-raised.
+  ['muted', 'toast', 4.5],
+  ['accent', 'toast', 3], // share glyph
+  ['star', 'toast', 3], // lightbulb
+  ['star', 'surface-raised', 3],
+  ['border', 'toast', 3], // "Not now" button edge
+  ['focus', 'toast', 3],
   ['rose', 'surface', 4.5], // off-state hint text (on its 9% rose tint the background is only lighter by a hair)
   ['rose', 'surface-raised', 4.5],
   ['accent-contrast', 'accent', 4.5], // selected option text in the styled picker; knob on the "on" track

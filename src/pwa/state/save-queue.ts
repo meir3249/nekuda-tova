@@ -25,6 +25,11 @@ export interface SaveQueue {
   /** Sends the pending change now if there is one (used on `online` and at startup). */
   retry(): Promise<void>
   hasPending(): boolean
+  /**
+   * Waits for any request in flight, then removes and returns the pending change (or null), without sending it.
+   * The enable flow folds it into its own direct save, so a queued `enabled: false` can never land after it.
+   */
+  take(): Promise<SettingsPatchInput | null>
   /** Resolves when no save is scheduled or in flight. For tests and orderly shutdown. */
   idle(): Promise<void>
 }
@@ -109,6 +114,28 @@ export function createSaveQueue(deps: SaveQueueDeps): SaveQueue {
 
     hasPending() {
       return pending !== null
+    },
+
+    async take() {
+      if (timer !== null) {
+        clearTimeout(timer)
+        timer = null
+      }
+      // Taken now, so a request in flight does not send it afterwards; a failed in-flight snapshot is taken too.
+      let taken = pending
+      pending = null
+      changedDuringFlight = false
+      while (inFlight) {
+        await inFlight
+        // A failed in-flight request puts its snapshot back (TS cannot see the mutation across the await).
+        const back = pending as SettingsPatchInput | null
+        if (back !== null) {
+          taken = { ...back, ...(taken ?? {}) }
+          pending = null
+        }
+      }
+      persist()
+      return taken
     },
 
     async idle() {

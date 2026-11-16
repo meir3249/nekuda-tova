@@ -6,6 +6,6 @@
     "lib": ["ES2023", "WebWorker"],
     "types": []
   },
-  "include": ["src/pwa/sw.ts", "src/pwa/strings.ts"],
+  "include": ["src/pwa/sw.ts", "src/pwa/sw-handlers.ts", "src/pwa/strings.ts"],
   "exclude": []
 }

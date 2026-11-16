@@ -1,10 +1,11 @@
 /// <reference lib="webworker" />
-// Service worker (spec 06). Built separately as a classic script `sw.js` at the base path root.
+// Service worker (specs 06, 07). Built separately as a classic script `sw.js` at the base path root.
 // - App-shell precache only (same-origin static files from the build). Supabase and every other
 //   origin are never intercepted or cached.
+// - Push: payload v1, never silent, title is the product name (sw-handlers.ts).
 // - Notification tap: close only. No openWindow / focus / navigate (D-017).
-// - Push display: minimal here; Task 07 owns the full contract (payload v1, malformed payloads).
-import { PRODUCT_NAME } from './strings.ts'
+// - pushsubscriptionchange: best-effort re-subscribe and tell open pages; the next open repairs otherwise.
+import { handleNotificationClick, handlePush, handleSubscriptionChange } from './sw-handlers.ts'
 
 declare const self: ServiceWorkerGlobalScope
 /** Injected at build time: precache paths relative to the scope, and a version hash of the build. */
@@ -53,35 +54,27 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(caches.match(url.href, { cacheName: CACHE_NAME }).then((hit) => hit ?? fetch(req)))
 })
 
-interface PushPayloadV1 {
-  v: 1
-  title: string
-  body: string
-  tag: string
-}
-
-function parsePayload(data: PushMessageData | null): PushPayloadV1 | null {
-  if (!data) return null
-  try {
-    const p = data.json() as Partial<PushPayloadV1>
-    if (p.v !== 1 || typeof p.title !== 'string' || typeof p.body !== 'string' || typeof p.tag !== 'string') return null
-    return p as PushPayloadV1
-  } catch {
-    return null
-  }
-}
-
 self.addEventListener('push', (event) => {
-  const p = parsePayload(event.data)
-  const icon = scopeUrl('icons/icon-192.png')
-  // Never silent: a malformed payload still shows a title-only notification. Never invent text.
-  event.waitUntil(
-    p
-      ? self.registration.showNotification(p.title || PRODUCT_NAME, { body: p.body, tag: p.tag, icon, badge: icon, lang: 'he', dir: 'rtl' })
-      : self.registration.showNotification(PRODUCT_NAME, { icon, badge: icon, lang: 'he', dir: 'rtl' }),
-  )
+  event.waitUntil(handlePush(self.registration, event.data, scopeUrl('icons/icon-192.png')))
 })
 
 self.addEventListener('notificationclick', (event) => {
-  event.notification.close()
+  handleNotificationClick(event.notification)
+})
+
+// Not in the standard WebWorker typings everywhere; `oldSubscription` may be missing (Safari, older Chrome).
+interface PushSubscriptionChangeEventLike extends ExtendableEvent {
+  readonly oldSubscription?: PushSubscription | null
+}
+
+self.addEventListener('pushsubscriptionchange', (event: Event) => {
+  const e = event as PushSubscriptionChangeEventLike
+  const key = e.oldSubscription?.options.applicationServerKey ?? null
+  e.waitUntil(
+    handleSubscriptionChange({
+      applicationServerKey: key,
+      subscribe: (options) => self.registration.pushManager.subscribe(options),
+      clients: () => self.clients.matchAll({ type: 'window', includeUncontrolled: true }),
+    }),
+  )
 })

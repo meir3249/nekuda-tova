@@ -1,69 +1,10 @@
 import { readFileSync } from 'node:fs'
-import { Window } from 'happy-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderIndexHtml } from '../../scripts/pwa-html.ts'
-import type { PublicSettings, SettingsApi, SettingsApiResult, SettingsPatchInput } from '../../src/pwa/api/settings-api.ts'
+import type { PublicSettings, SettingsApiResult } from '../../src/pwa/api/settings-api.ts'
 import { MemoryStore, PENDING_KEY, SETTINGS_KEY, readPending, writePending, writeSettings } from '../../src/pwa/state/local-cache.ts'
 import { strings } from '../../src/pwa/strings.ts'
-import { startSettingsScreen } from '../../src/pwa/ui/settings-screen.ts'
-
-const TZ = 'Asia/Jerusalem'
-const html = renderIndexHtml(readFileSync('src/pwa/index.html', 'utf8'), { connectOrigins: null, privacyUrl: 'https://example.org/privacy' })
-const bodyHtml = /<body>([\s\S]*)<\/body>/.exec(html)![1]!
-
-class FakeApi implements SettingsApi {
-  saves: SettingsPatchInput[] = []
-  sessions = 0
-  server: PublicSettings | null = null
-  saveResult: (p: SettingsPatchInput) => SettingsApiResult<PublicSettings> = (p) => ({
-    ok: true,
-    value: { localTime: p.localTime ?? '09:00', timezone: p.timezone ?? TZ, enabled: p.enabled ?? false, nextSendAt: null },
-  })
-  getCalls = 0
-  ensureSession(): Promise<string> {
-    this.sessions++
-    return Promise.resolve('uid')
-  }
-  getSettings(): Promise<SettingsApiResult<PublicSettings | null>> {
-    this.getCalls++
-    return Promise.resolve({ ok: true, value: this.server })
-  }
-  saveSettings(patch: SettingsPatchInput): Promise<SettingsApiResult<PublicSettings>> {
-    this.saves.push(patch)
-    return Promise.resolve(this.saveResult(patch))
-  }
-}
-
-function mount(opts: { store?: MemoryStore; api?: SettingsApi | null; pushFlowEnabled?: boolean } = {}) {
-  const win = new Window({ settings: { disableJavaScriptFileLoading: true, disableJavaScriptEvaluation: true, disableCSSFileLoading: true } })
-  win.document.body.innerHTML = bodyHtml
-  const doc = win.document as unknown as Document
-  const store = opts.store ?? new MemoryStore()
-  const api = opts.api === undefined ? new FakeApi() : opts.api
-  const events = new EventTarget()
-  const screen = startSettingsScreen({
-    doc,
-    store,
-    api,
-    deviceTimezone: () => TZ,
-    events,
-    pushFlowEnabled: opts.pushFlowEnabled ?? false,
-  })
-  const select = doc.getElementById('time') as HTMLSelectElement
-  const toggle = doc.getElementById('notify') as HTMLInputElement
-  const status = doc.getElementById('status') as HTMLElement
-  const stateText = doc.getElementById('notify-state') as HTMLElement
-  const choose = (value: string) => {
-    select.value = value
-    select.dispatchEvent(new win.Event('change') as unknown as Event)
-  }
-  const flip = (checked: boolean) => {
-    toggle.checked = checked
-    toggle.dispatchEvent(new win.Event('change') as unknown as Event)
-  }
-  return { win, doc, store, api: api as FakeApi, events, screen, select, toggle, status, stateText, choose, flip }
-}
-
+import { FakeApi, TZ, html, mount } from './screen-harness.ts'
 describe('static HTML (first paint without JavaScript)', () => {
   it('is Hebrew RTL with the text from strings and 48 pre-rendered options defaulting to 09:00', () => {
     expect(html).toContain('<html lang="he" dir="rtl">')
@@ -280,37 +221,19 @@ describe('settings screen', () => {
     expect(m.store.getItem(PENDING_KEY)).toBeNull()
   })
 
-  describe('notifications switch before Task 07 (feature flag off)', () => {
-    it('turning it on explains, returns to off, and saves nothing', async () => {
+  describe('notifications switch', () => {
+    it('turning it on (permission already granted) subscribes and saves enabled with the subscription', async () => {
       const m = mount()
-      m.flip(true)
-      expect(m.toggle.checked).toBe(false)
-      expect(m.toggle.getAttribute('aria-checked')).toBe('false')
-      expect(m.status.textContent).toBe(strings.pushComingSoon)
-      await vi.advanceTimersByTimeAsync(1000)
-      expect(m.api.saves).toHaveLength(0)
-    })
-
-    it('a cached or server "enabled" is shown as off', async () => {
-      const store = new MemoryStore()
-      writeSettings(store, { localTime: '09:00', timezone: TZ, enabled: true })
-      const api = new FakeApi()
-      api.server = { localTime: '09:00', timezone: TZ, enabled: true, nextSendAt: null }
-      const m = mount({ store, api })
-      expect(m.toggle.checked).toBe(false)
       await m.screen.ready
-      expect(m.toggle.checked).toBe(false)
-    })
-  })
-
-  describe('notifications switch with the flag on (Task 07 path)', () => {
-    it('saves enabled with the current time and timezone and updates the state text', async () => {
-      const m = mount({ pushFlowEnabled: true })
+      m.push.perm = 'granted'
       m.flip(true)
       expect(m.stateText.textContent).toBe(strings.notificationsOn)
       expect(m.toggle.getAttribute('aria-checked')).toBe('true')
-      await vi.advanceTimersByTimeAsync(400)
-      expect(m.api.saves).toEqual([{ localTime: '09:00', timezone: TZ, enabled: true }])
+      await m.screen.settled()
+      expect(m.api.saves).toHaveLength(1)
+      expect(m.api.saves[0]).toMatchObject({ localTime: '09:00', timezone: TZ, enabled: true })
+      expect(m.api.saves[0]!.pushSubscription?.endpoint).toMatch(/^https:\/\/fcm\.googleapis\.com\//)
+      expect(m.status.textContent).toBe(strings.saved)
     })
   })
 

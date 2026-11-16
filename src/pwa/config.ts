@@ -14,9 +14,3 @@ export function pwaConfig(): PwaConfig {
   const c = typeof __NTK_CONFIG__ === 'undefined' ? undefined : __NTK_CONFIG__
   return { supabaseUrl: c?.supabaseUrl ?? '', anonKey: c?.anonKey ?? '', vapidPublicKey: c?.vapidPublicKey ?? '' }
 }
-
-/**
- * Task 06 gate: turning notifications on needs the permission and subscription flow from Task 07.
- * Until then the switch explains that and stays off. Task 07 removes this flag.
- */
-export const PUSH_FLOW_ENABLED = false

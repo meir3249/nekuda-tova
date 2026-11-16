@@ -540,6 +540,145 @@ input[type='checkbox'][role='switch']:checked::before {
   transform: none;
 }
 
+/* ---- Quiet switch: looks off and muted, stays focusable and tappable (the tap explains, via the toast or the
+   install sheet). aria-disabled, never `disabled`, which could not receive that tap. ---- */
+
+input[type='checkbox'][role='switch'][aria-disabled='true'] {
+  opacity: 0.55;
+}
+
+/* ---- iOS install sheet: one soft, rounded card floating at the bottom, in the toast's visual language.
+   Non-modal: no backdrop, nothing behind it is blocked or dimmed. ---- */
+
+.sheet {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem));
+  z-index: 20;
+  display: grid;
+  gap: 0.85rem;
+  inline-size: min(92%, 30rem);
+  max-block-size: min(60vh, 26rem);
+  overflow-y: auto;
+  margin: 0 auto;
+  padding-block: 1.5rem 1.25rem;
+  padding-inline: 1.5rem;
+  color: var(--text);
+  background: linear-gradient(165deg, var(--toast), var(--surface-raised));
+  border: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 1.75rem 3.5rem -1rem rgb(0 0 0 / 0.7),
+    0 0 0 1px rgb(255 255 255 / 0.04) inset,
+    0 -0.5rem 2.5rem -1.5rem color-mix(in srgb, var(--star) 25%, transparent);
+  opacity: 0;
+  transform: translateY(1rem);
+  transition:
+    opacity 400ms var(--ease),
+    transform 400ms var(--ease);
+}
+
+.sheet.open {
+  opacity: 1;
+  transform: none;
+}
+
+.sheet[hidden] {
+  display: none;
+}
+
+.sheet:focus {
+  outline: none;
+}
+
+.sheet:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+/* The lightbulb: a small warm glow, the "illumination" of the tip. Decorative. */
+.bulb {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border-radius: 50%;
+  color: var(--star);
+  background: radial-gradient(circle, color-mix(in srgb, var(--star) 24%, transparent) 0%, color-mix(in srgb, var(--star) 8%, transparent) 70%);
+  box-shadow: 0 0 1.5rem color-mix(in srgb, var(--star) 30%, transparent);
+}
+
+.bulb svg {
+  display: block;
+}
+
+.sheet h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.sheet-steps {
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* "Share", with the iOS share glyph beside the word. */
+.share {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-inline: 0.2rem 0;
+  padding-inline: 0.45rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.share-glyph {
+  flex: none;
+  color: var(--accent);
+}
+
+.sheet-fine {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.sheet-dismiss {
+  justify-self: end;
+  min-block-size: 2.75rem;
+  margin-block-start: 0.25rem;
+  padding-block: 0.5rem;
+  padding-inline: 1.4rem;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    border-color 200ms var(--ease),
+    background-color 200ms var(--ease);
+}
+
+.sheet-dismiss:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
 /* ---- Reduced motion: no transitions, no breathing, the toast simply appears. ---- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -550,7 +689,8 @@ input[type='checkbox'][role='switch']:checked::before {
     animation: none !important;
   }
 
-  .toast {
+  .toast,
+  .sheet {
     transform: none;
   }
 }

@@ -65,6 +65,16 @@ describe('detectEnvironment', () => {
     expect(r.state).toBe('unsupported')
   })
 
+  it('iOS in-app browsers (Instagram, Facebook) → unsupported, not "install"', () => {
+    for (const ua of [
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Instagram 300.0.0',
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 [FBAN/FBIOS;FBAV/450.0]',
+    ]) {
+      const r = detectEnvironment({ ...base, userAgent: ua, platform: 'iPhone', maxTouchPoints: 5, hasPushManager: false, hasNotification: false })
+      expect(r.state, ua).toBe('unsupported')
+    }
+  })
+
   it('passes permission through', () => {
     expect(detectEnvironment({ ...base, permission: 'denied' }).permission).toBe('denied')
     expect(detectEnvironment({ ...base, permission: 'granted' }).permission).toBe('granted')

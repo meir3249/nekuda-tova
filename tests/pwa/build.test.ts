@@ -84,7 +84,15 @@ describe('PWA build output', () => {
     expect(sw).not.toMatch(/focus\(/)
     expect(sw).not.toMatch(/navigate\(/)
     expect(sw).toContain('notificationclick')
-    expect(sw).toMatch(/notification\.close\(\)/)
+    expect(sw).toMatch(/\.close\(\)/)
+  })
+
+  it('sw.js handles push and pushsubscriptionchange, and stays free of page/UI code', () => {
+    const sw = read('sw.js')
+    expect(sw).toMatch(/addEventListener\(["`']push["`']/)
+    expect(sw).toContain('pushsubscriptionchange')
+    expect(sw).toContain('ntk:pushsubscriptionchange')
+    expect(sw).not.toMatch(/getElementById|localStorage|supabase/i)
   })
 
   it('the service worker never touches other origins (Supabase is not intercepted or cached)', () => {
