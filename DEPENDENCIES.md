@@ -122,3 +122,6 @@ Source: [GitHub Pages limits](https://docs.github.com/en/pages/getting-started-w
 | Deployment time | 10 minutes | Under a minute |
 | Builds | 10 per hour (soft), not applied to custom Actions workflows | We use a custom workflow |
 | Use policy | Not for commercial transactions or sensitive data such as passwords | A free, non-commercial settings page; no passwords |
+## Project license (2026-11-23)
+
+This project is **AGPL-3.0-or-later** (LICENSE, package.json). Compatibility with the dependencies: MIT, 0BSD and similar permissive licenses are compatible. web-push (MPL-2.0) is compatible because MPL-2.0 section 3.3 allows combining with GNU licenses as a secondary license, provided the MPL files carry no 'Incompatible With Secondary Licenses' notice (not re-verified file by file; re-check when upgrading). The Rubik font (OFL-1.1) is a separate bundled asset under its own license. The Edge Function and the PWA are served to users over a network, so AGPL section 13 applies if you modify and host them.

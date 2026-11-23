@@ -1,7 +1,7 @@
 # DECISIONS.md — Nekuda Tova
 
 Persistent decision log. Nothing important lives only in chat.
-Last updated: 2026-11-16 (Phase 3 approved; Phase 4 in progress, Task 01).
+Last updated: 2026-11-23 (Phase 4, Task 08 documentation written; device checks and 7-day soak pending).
 
 Status legend: **Approved** (user said so explicitly) · **Proposed** (written in specs, NOT yet approved) · **Open** (needs a user answer) · **Superseded**.
 
@@ -200,7 +200,7 @@ Choices made while implementing (flagged for review):
 7. **Timezone:** read on every open and sent with every save; the local cache keeps the device timezone. Re-saving automatically when only the timezone changed is left to Task 07's auto-follow rule.
 8. **Bundle size:** about 226 kB (60 kB gzipped), almost all `@supabase/supabase-js` (auth, functions, realtime, storage). It is loaded after first paint and cached by the service worker. Trimming it (for example, plain `fetch` calls to the auth endpoints) is possible but not done; tell me if you want it.
 9. **Type checking:** the main program now includes the DOM library; `sw.ts` is checked separately with the WebWorker library (`tsconfig.sw.json`), because the two libraries conflict.
-10. **Privacy link** goes to `docs/privacy.md` on GitHub; that file is Task 08, so the link 404s until then. The footer is omitted when no URL is configured.
+10. **Privacy link** goes to `docs/privacy.md` on GitHub; that file now exists (Task 08). The footer is omitted when no URL is configured.
 
 Verified: see `docs/verification/task-06-pwa-checklist.md`. In headless Chrome there were no installability errors, the service worker activated, an offline reload worked, and the only origins contacted were the app and Supabase. Not verified: the deployed Pages URL, real devices (Android, iOS), a real Supabase round trip, screen readers, 200% zoom.
 
@@ -239,3 +239,10 @@ Approved by you before implementation: switch Option A (pill with the state word
 - **In-app browsers** (Instagram, Facebook, etc. on iOS) are now `unsupported` in core detection, not `ios_needs_install`: they cannot add to the Home Screen, so the install advice would be wrong (spec 07 edge case).
 - **Service worker:** the title is always the product name; malformed or empty payloads show a title-only notification (never silent, no invented text). Push logic lives in `src/pwa/sw-handlers.ts` (unit-tested with fakes).
 - **Not verified (needs the deployed URL and real devices):** acceptance 1–4, 7–10 (observed parts) and 12; recorded in `docs/verification/device-checklist.md`.
+
+## 14. Task 08 implementation notes (2026-11-23)
+
+- Added docs/privacy.md, docs/limitations.md, docs/verification/accessibility-checklist.md, docs/verification/final-report-template.md; completed README.md; added operations section 4 (VAPID rotation, constants, free-tier changes) and a Unix sender example.
+- 	ests/docs/docs.test.ts checks internal links, that privacy names only real schema columns, retention values (365 and 90 days) against src/sender/config.ts, required limitations headings, cron minutes against send.yml, and the absence of guarantee claims.
+- Risks R-01..R-10 are each covered in docs/limitations.md or docs/privacy.md (R-08 resolved in Task 05, R-09 in Task 04).
+- **Not done, needs you:** the fresh-clone walkthrough, the 7-day soak with real delay data, real-device checklist rows (all remain **Not run**), the filled-in final report, and choosing a license. R-01..R-03 observed data (delay distribution, keep-alive, Supabase pause) is not yet recorded.

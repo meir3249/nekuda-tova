@@ -97,6 +97,13 @@ Locally (for example against the local Supabase stack):
 ```
 $env:SUPABASE_URL = "http://127.0.0.1:54321"
 $env:SUPABASE_SERVICE_ROLE_KEY = "<local secret key from: npx supabase status>"
+$env:DRY_RUN = "1"                    # PowerShell 5.1 swallows "--", so do not rely on: npm run sender -- --dry-run
+npm run sender
+```
+On macOS or Linux:
+```
+export SUPABASE_URL="http://127.0.0.1:54321"
+export SUPABASE_SERVICE_ROLE_KEY="<local secret key from: npx supabase status>"
 npm run sender -- --dry-run
 ```
 
@@ -148,7 +155,7 @@ If a run crashes after a push service accepted a message but before the database
 
 3. Set the Edge Function's allowed origin to the Pages origin (section 1.4): `ALLOWED_ORIGINS=https://<github-user>.github.io`. The origin has no path.
 
-`pages.yml` runs on every push to the default branch that touches the PWA, core, build scripts or dependencies, and on demand (**Actions → Pages → Run workflow**). It fails instead of publishing if `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` is missing. The base path is the repository name (`/nekuda-tova/` for Q-02), taken automatically. The privacy link points at `docs/privacy.md` on the default branch (that file is written in Task 08; until then the link is a 404).
+`pages.yml` runs on every push to the default branch that touches the PWA, core, build scripts or dependencies, and on demand (**Actions → Pages → Run workflow**). It fails instead of publishing if `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` is missing. The base path is the repository name (`/nekuda-tova/` for Q-02), taken automatically. The privacy link points at `docs/privacy.md` on the default branch.
 
 ### 3.2 Local development
 ```
@@ -165,3 +172,26 @@ Clearing site data, or the browser evicting it, gives the device a new anonymous
 
 ### 3.4 Placeholder icons
 `npm run icons:generate` rewrites `src/pwa/public/icons/*` (a warm dot on a light background, Q-04). To use a real icon, replace those files with the same names and sizes (192, 512, maskable 512 with the motif inside the central 80%, 180 for iOS, and an SVG favicon).
+
+## 4. Maintenance
+
+### 4.1 Rotating VAPID keys
+Existing push subscriptions are bound to the public key, so after a rotation **every user must subscribe again**: their pushes fail until they open the app, turn notifications off and on, and a failed push may disable the row. Rotate only if the private key leaked.
+1. `npm run vapid:generate`.
+2. Replace `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` in the GitHub Actions secrets, and the `VITE_VAPID_PUBLIC_KEY` variable (section 3.1). Re-run **Pages**.
+3. Expect `expired_subscription` or `failed` rows in `delivery_log` until users resubscribe.
+
+### 4.2 Tunable constants
+These live in `src/sender/config.ts` (and `src/core/scheduling/staleness.ts` for the window default). Changing them needs a deploy and a documentation update.
+
+| Constant | Value | Effect |
+|---|---|---|
+| `maxLateSeconds` | 7200 | Later than this, a send is skipped for that day (D-011) |
+| `ttlSeconds` | 3600 | How long the push service may hold a message for an offline device |
+| `leaseSeconds` | 900 | How long a claimed row is hidden from other runs after a crash |
+| `batchSize` | 50 | Rows claimed per run |
+| `inactiveRetentionDays` | 365 | Disabled rows older than this are deleted |
+| `logRetentionDays` | 90 | Delivery log and run rows older than this are deleted |
+
+### 4.3 If a free tier changes
+Every number in this document was true on the date it was written. Re-verify limits on the Supabase and GitHub pricing pages before relying on them. The pieces are replaceable: any Postgres with the migrations in `supabase/migrations/`, any scheduler that runs `npm run sender` every 30 minutes, and any static host for the PWA.

@@ -2,6 +2,7 @@
   "name": "nekuda-tova",
   "version": "0.0.0",
   "private": true,
+  "license": "AGPL-3.0-or-later",
   "description": "One small positive thought a day. A PWA with Web Push.",
   "type": "module",
   "engines": {
