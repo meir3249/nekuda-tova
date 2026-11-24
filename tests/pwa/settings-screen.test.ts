@@ -233,7 +233,7 @@ describe('settings screen', () => {
       expect(m.api.saves).toHaveLength(1)
       expect(m.api.saves[0]).toMatchObject({ localTime: '09:00', timezone: TZ, enabled: true })
       expect(m.api.saves[0]!.pushSubscription?.endpoint).toMatch(/^https:\/\/fcm\.googleapis\.com\//)
-      expect(m.status.textContent).toBe(strings.saved)
+      expect(m.status.textContent).toBe(strings.notificationsEnabled)
     })
   })
 

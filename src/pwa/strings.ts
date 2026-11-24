@@ -15,11 +15,15 @@ export const strings = {
   notificationsOffHint: 'כל עוד ההתראות כבויות, לא יגיעו אליך הודעות.',
 
   saved: 'נשמר',
+  notificationsEnabled: 'ההתראות הופעלו.',
+  notificationsDisabled: 'ההתראות כובו.',
   saveFailed: 'לא הצלחנו לשמור כרגע. ננסה שוב.',
   saveRejected: 'לא הצלחנו לשמור את השינוי הזה.',
   capacityReached: 'אי אפשר להצטרף כרגע. אפשר לנסות שוב מאוחר יותר.',
   enableFailed: 'לא הצלחנו להפעיל התראות כרגע. אפשר לנסות שוב.',
   enableOffline: 'אין חיבור כרגע. אפשר לנסות שוב כשיהיה.',
+  subscriptionFailed: 'לא הצלחנו לרשום את המכשיר להתראות. אפשר לנסות שוב.',
+  configError: 'התצורה חסרה. אפשר לנסות שוב מאוחר יותר.',
   permissionDenied: 'ההתראות כבויות בהגדרות המכשיר. אפשר להפעיל אותן שם בכל זמן.',
   unsupported: 'הדפדפן הזה לא יכול לשלוח התראות. אולי דפדפן אחר יוכל.',
 
@@ -47,11 +51,15 @@ export type StringKey = keyof typeof strings
 /** Everything that can appear in the toast (Calm-space principle: one short, warm sentence each). */
 export const TOAST_KEYS = [
   'saved',
+  'notificationsEnabled',
+  'notificationsDisabled',
   'saveFailed',
   'saveRejected',
   'capacityReached',
   'enableFailed',
   'enableOffline',
+  'subscriptionFailed',
+  'configError',
   'permissionDenied',
   'unsupported',
 ] as const satisfies readonly StringKey[]

@@ -201,6 +201,7 @@ describe('turning notifications on (push_ready)', () => {
     expect(m.hint.hidden).toBe(true)
     expect(m.screen.state().enabled).toBe(true)
     expect(m.store.getItem(ENDPOINT_HASH_KEY)).toBe(endpointHash(m.push.current!.endpoint))
+    expect(m.status.textContent).toBe(strings.notificationsEnabled)
   })
 
   it('shows "on" while the prompt is open; a second tap meanwhile changes nothing', async () => {
@@ -271,22 +272,22 @@ describe('turning notifications on (push_ready)', () => {
     expect(m.status.textContent).toBe(strings.enableOffline)
   })
 
-  it('subscribe throwing (push service unreachable) shows the generic message and saves nothing', async () => {
+  it('subscribe throwing (push service unreachable) shows the subscription-failed message and saves nothing', async () => {
     const m = mount()
     m.push.subscribeFails = true
     m.tap()
     await m.screen.settled()
     expect(m.api.saves).toHaveLength(0)
-    expect(m.status.textContent).toBe(strings.enableFailed)
+    expect(m.status.textContent).toBe(strings.subscriptionFailed)
     expect(m.toggle.checked).toBe(false)
   })
 
-  it('a missing or invalid VAPID key never reaches subscribe', async () => {
+  it('a missing or invalid VAPID key never reaches subscribe and shows the config error', async () => {
     const m = mount({ vapidPublicKey: '' })
     m.tap()
     await m.screen.settled()
     expect(m.push.subscribeCalls).toBe(0)
-    expect(m.status.textContent).toBe(strings.enableFailed)
+    expect(m.status.textContent).toBe(strings.configError)
   })
 
   it('a queued "off" from an offline moment is folded into the "on" save, so it can never land after it', async () => {
@@ -324,6 +325,7 @@ describe('turning notifications off', () => {
     expect(m.api.saves.at(-1)).toEqual({ localTime: '09:00', timezone: TZ, enabled: false })
     expect(sub.unsubscribed).toBe(true)
     expect(m.store.getItem(ENDPOINT_HASH_KEY)).toBeNull()
+    expect(m.status.textContent).toBe(strings.notificationsDisabled)
   })
 
   it('offline: the switch is off immediately and the change stays pending', async () => {

@@ -89,6 +89,8 @@ export function startSettingsScreen(deps: SettingsScreenDeps): SettingsScreen {
   let userChanged = false
   /** An enable attempt is running: the switch shows "on" until it succeeds or slides back. */
   let enabling: Promise<void> | null = null
+  /** Set to true while a disable save is in flight, so onOutcome can show the right toast. */
+  let disabling = false
   /** Last settings the server confirmed (read or save); the basis for silent repairs. */
   let server: PublicSettings | null = null
 
@@ -112,7 +114,12 @@ export function startSettingsScreen(deps: SettingsScreenDeps): SettingsScreen {
   const onOutcome = (o: SaveOutcome): void => {
     if (o.kind === 'saved') {
       server = o.settings
-      notify(strings.saved, SAVED_VISIBLE_MS)
+      if (disabling) {
+        disabling = false
+        notify(strings.notificationsDisabled, SAVED_VISIBLE_MS)
+      } else {
+        notify(strings.saved, SAVED_VISIBLE_MS)
+      }
     } else if (o.kind === 'failed') notify(strings.saveFailed)
     else notify(o.code === 'CAPACITY_REACHED' ? strings.capacityReached : strings.saveRejected)
   }
@@ -195,6 +202,7 @@ export function startSettingsScreen(deps: SettingsScreenDeps): SettingsScreen {
   })
 
   function disable(): void {
+    disabling = true
     change({ enabled: false }, { enabled: false })
     writeEndpointHash(store, null)
     // Immediate effect on this device, even if the server only hears about it once back online.
@@ -204,13 +212,20 @@ export function startSettingsScreen(deps: SettingsScreenDeps): SettingsScreen {
   async function enable(permission: Promise<PermissionState>): Promise<void> {
     const p = await permission
     env = deps.readEnvironment()
-    // Dismissed or denied: the switch slides back, no message (a later tap on the quiet switch explains).
-    if (p !== 'granted') return
-    if (!deps.push || !deps.api) return notify(strings.enableFailed)
+    // Dismissed or denied in the prompt: the switch slides back silently.
+    // (The permissionDenied toast fires when the user taps the already-denied quiet switch.)
+    if (p !== 'granted') {
+      return
+    }
+    if (!deps.push || !deps.api) return notify(strings.configError)
     if (!deps.isOnline()) return notify(strings.enableOffline)
 
     const sub = await subscribePush(deps.push, deps.vapidPublicKey)
-    if (!sub.ok) return notify(deps.isOnline() ? strings.enableFailed : strings.enableOffline)
+    if (!sub.ok) {
+      if (sub.reason === 'NO_VAPID_KEY') return notify(strings.configError)
+      // SUBSCRIBE_FAILED may be a transient network issue; show enableOffline when offline.
+      return notify(!deps.isOnline() ? strings.enableOffline : strings.subscriptionFailed)
+    }
 
     // Fold any pending change into this save, so a queued "off" can never land after this "on".
     const queued = await queue.take()
@@ -241,7 +256,7 @@ export function startSettingsScreen(deps: SettingsScreenDeps): SettingsScreen {
     userChanged = true
     writeEndpointHash(store, sub.stored.endpoint)
     setState({ enabled: true })
-    notify(strings.saved, SAVED_VISIBLE_MS)
+    notify(strings.notificationsEnabled, SAVED_VISIBLE_MS)
   }
 
   // 3. Silent repairs (spec 07, Renewal and revocation, Timezone follow). Never shows anything.
