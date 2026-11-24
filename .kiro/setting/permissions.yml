@@ -1,0 +1,17 @@
+auto_approve:
+  # אישור אוטומטי לקריאה וכתיבה של קבצים בתוך סביבת העבודה
+  file_read: true
+  file_write: true
+  
+  # הגבלת הרצת פקודות - רק מה שברשימה הלבנה ירוץ אוטומטית
+  allowed_commands:
+    - "npx *"
+    - "npm *"
+    - "expo *"
+    - "cd *"
+    - ".\\gradlew.bat *"
+    
+# נעילת נתיב: הסוכן יכול לפעול אך ורק בתוך התיקייה הזו
+workspace_lock: true
+allowed_directories:
+  - "./" # התיקייה הנוכחית בלבד
