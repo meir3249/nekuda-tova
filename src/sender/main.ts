@@ -10,6 +10,7 @@ import { SupabaseDeliveryLog } from '../adapters/supabase/supabase-delivery-log.
 import { SupabaseUserRepository } from '../adapters/supabase/supabase-user-repository.ts'
 import { SystemClock } from '../adapters/system/system-clock.ts'
 import { WebPushSender } from '../adapters/web-push/web-push-sender.ts'
+import type { WebPushSenderOptions } from '../adapters/web-push/web-push-sender.ts'
 import type { Clock } from '../core/ports/clock.ts'
 import type { ContentSource } from '../core/ports/content-source.ts'
 import type { DeliveryLog } from '../core/ports/delivery-log.ts'
@@ -18,6 +19,7 @@ import type { SubscriptionLookup, UserRepository } from '../core/ports/user-repo
 import { runSendCycle } from '../core/usecases/run-send-cycle.ts'
 import { runTestPush } from '../core/usecases/run-test-push.ts'
 import { parseSenderConfig, type Env, type SenderConfig } from './config.ts'
+import { verboseLog, verbosePush, verboseUsers } from './debug-proxies.ts'
 import { formatMarkdownSummary, formatReport, redact, shortId } from './report.ts'
 
 export const CONTENT_PATH = 'data/messages.json'
@@ -33,6 +35,8 @@ export interface SenderPorts {
 export interface SenderIo {
   out(line: string): void
   err(line: string): void
+  /** Debug sink — verbose-only, writes to stderr. No-op in production. */
+  debug(line: string): void
   appendFile(path: string, text: string): void
 }
 
@@ -56,9 +60,31 @@ export const buildRealPorts: BuildPorts = (config) => {
   }
 }
 
+export function buildRealPortsVerbose(dbg: (line: string) => void): BuildPorts {
+  return (config) => {
+    const client = createServiceClient(config.supabaseUrl, config.serviceKey)
+    return {
+      clock: new SystemClock(),
+      content: new RepoFileContentSource(CONTENT_PATH),
+      users: new SupabaseUserRepository(client),
+      push: config.vapid
+        ? new WebPushSender(config.vapid, {
+            onRawResponse: ({ endpoint, statusCode, body, headers }) => {
+              dbg(`[${new Date().toISOString().replace('T', ' ').replace('Z', '')}] PUSH raw response  status=${statusCode}  endpoint=${endpoint}`)
+              dbg(`  headers: ${JSON.stringify(headers)}`)
+              dbg(`  body:    ${body || '(empty)'}`)
+            },
+          })
+        : forbiddenPush,
+      log: new SupabaseDeliveryLog(client),
+    }
+  }
+}
+
 const realIo: SenderIo = {
   out: (line) => console.log(line),
   err: (line) => console.error(line),
+  debug: () => {},
   appendFile: (path, text) => appendFileSync(path, text),
 }
 
@@ -79,8 +105,19 @@ export async function runSender(
   }
   const { config } = parsed
 
+  // When verbose, swap in the debug-aware builder so the WebPushSender emits raw HTTP details.
+  const builder = config.verbose ? buildRealPortsVerbose((line) => io.debug(line)) : build
+
   try {
-    const ports = build(config)
+    const ports = builder(config)
+
+    if (config.verbose) {
+      const dbg = (line: string): void => io.debug(line)
+      ports.users = verboseUsers(ports.users, dbg)
+      ports.push = verbosePush(ports.push, dbg)
+      ports.log = verboseLog(ports.log, dbg)
+      io.debug(`[verbose] sender started  dryRun=${config.dryRun} testPushUserId=${config.testPushUserId ?? 'none'}`)
+    }
 
     if (config.testPushUserId !== null) {
       const outcome = await runTestPush(
@@ -123,5 +160,9 @@ export async function runSender(
 // Run only when executed directly (not when imported by tests).
 const entry = process.argv[1]
 if (entry !== undefined && import.meta.url === pathToFileURL(entry).href) {
-  process.exitCode = await runSender(process.argv.slice(2), process.env)
+  const argv = process.argv.slice(2)
+  const verboseIo: SenderIo | undefined = argv.includes('--verbose') || process.env['VERBOSE']
+    ? { ...realIo, debug: (line) => process.stderr.write(line + '\n') }
+    : undefined
+  process.exitCode = await runSender(argv, process.env, verboseIo)
 }

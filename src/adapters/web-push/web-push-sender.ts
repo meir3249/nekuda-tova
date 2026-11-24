@@ -27,9 +27,19 @@ export interface WebPushSenderOptions {
   sendNotification?: SendNotification
   allowlist?: PushEndpointAllowlist
   timeoutMs?: number
+  /** Called with raw HTTP details after every send attempt. Used only for local verbose logging. */
+  onRawResponse?: (info: { endpoint: string; statusCode: number; body: string; headers: Record<string, string> }) => void
 }
 
-/** P-08, defensive re-check: HTTPS only, and the host must be a known push service. */
+/** Returns true when the endpoint belongs to Apple's push infrastructure. */
+export function isAppleEndpoint(endpoint: string): boolean {
+  try {
+    const h = new URL(endpoint).hostname.toLowerCase()
+    return h === 'web.push.apple.com' || h.endsWith('.push.apple.com')
+  } catch {
+    return false
+  }
+}
 export function isAllowedEndpoint(endpoint: string, allowlist: PushEndpointAllowlist): boolean {
   let url: URL
   try {
@@ -49,12 +59,14 @@ export class WebPushSender implements PushSender {
   private readonly sendNotification: SendNotification
   private readonly allowlist: PushEndpointAllowlist
   private readonly timeoutMs: number
+  private readonly onRawResponse: WebPushSenderOptions['onRawResponse']
 
   constructor(vapid: VapidDetails, options: WebPushSenderOptions = {}) {
     this.vapid = vapid
     this.sendNotification = options.sendNotification ?? ((sub, payload, opts) => webPush.sendNotification(sub, payload, opts))
     this.allowlist = options.allowlist ?? DEFAULT_PUSH_ENDPOINT_ALLOWLIST
     this.timeoutMs = options.timeoutMs ?? PUSH_REQUEST_TIMEOUT_MS
+    this.onRawResponse = options.onRawResponse
   }
 
   async send(subscription: StoredPushSubscription, payload: PushPayload, options: PushOptions): Promise<PushResult> {
@@ -67,15 +79,25 @@ export class WebPushSender implements PushSender {
       TTL: options.ttlSeconds,
       urgency: options.urgency,
       timeout: this.timeoutMs,
-      ...(options.topic ? { topic: options.topic } : {}),
+      // Apple rejects arbitrary topic strings with BadWebPushTopic; omit for Apple endpoints.
+      ...(options.topic && !isAppleEndpoint(subscription.endpoint) ? { topic: options.topic } : {}),
     }
 
     try {
       const res = await this.sendNotification(subscription, JSON.stringify(payload), sendOptions)
+      this.onRawResponse?.({ endpoint: subscription.endpoint, statusCode: res.statusCode, body: (res as { body?: string }).body ?? '', headers: (res as { headers?: Record<string, string> }).headers ?? {} })
       return mapStatus(res.statusCode)
     } catch (e) {
       const status = (e as { statusCode?: unknown }).statusCode
-      if (typeof status === 'number') return mapStatus(status)
+      if (typeof status === 'number') {
+        this.onRawResponse?.({
+          endpoint: subscription.endpoint,
+          statusCode: status,
+          body: (e as { body?: string }).body ?? '',
+          headers: (e as { headers?: Record<string, string> }).headers ?? {},
+        })
+        return mapStatus(status)
+      }
       return { kind: 'failed', status: null, retryable: true, error: networkErrorCode(e) }
     }
   }

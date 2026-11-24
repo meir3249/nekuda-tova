@@ -114,6 +114,7 @@ function harness(raw?: string) {
   const io: SenderIo = {
     out: (l) => out.push(l),
     err: (l) => err.push(l),
+    debug: () => {},
     appendFile: (p, t) => files.set(p, (files.get(p) ?? '') + t),
   }
   repo.put({

@@ -6,6 +6,7 @@ export interface SenderConfig {
   /** Null in dry-run mode, where nothing is sent. */
   vapid: { subject: string; publicKey: string; privateKey: string } | null
   dryRun: boolean
+  verbose: boolean
   testPushUserId: string | null
   stepSummaryPath: string | null
   cycle: SendCycleConfig
@@ -42,10 +43,12 @@ export function parseSenderConfig(argv: readonly string[], env: Env, now: Date):
   const errors: string[] = []
 
   let dryRun = truthy(env['DRY_RUN'])
+  let verbose = truthy(env['VERBOSE'])
   let testPushUserId: string | null = null
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === '--dry-run') dryRun = true
+    else if (arg === '--verbose') verbose = true
     else if (arg === '--test-push') {
       const value = argv[++i]
       if (value === undefined || !UUID.test(value)) errors.push('--test-push needs a user id (a UUID)')
@@ -93,6 +96,7 @@ export function parseSenderConfig(argv: readonly string[], env: Env, now: Date):
       serviceKey,
       vapid,
       dryRun,
+      verbose,
       testPushUserId,
       stepSummaryPath: env['GITHUB_STEP_SUMMARY']?.trim() || null,
       cycle: { ...CYCLE_DEFAULTS, runId, dryRun },

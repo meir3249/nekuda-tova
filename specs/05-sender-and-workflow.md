@@ -34,11 +34,29 @@ Steps (exact order):
 Dry run (`dryRun: true`): reads due rows via `peekDue`, computes what would happen (send / skip_stale / index), calls **no** write method and **no** `PushSender`, prints a table. Used for the first demo.
 
 ### Entry point `src/sender/main.ts`
-- Reads env: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a `mailto:` or https URL), `DRY_RUN`, `GITHUB_RUN_ID`, `GITHUB_STEP_SUMMARY`. Missing required secret → exit 2 with a message naming the variable (never the value).
-- CLI flags: `--dry-run`, `--test-push <userId>` (sends the user's *next* message to that user's stored subscription **without** changing counter/schedule or writing `delivery_log`; used only for demo and diagnostics; refuses when the user has no subscription).
+- Reads env: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a `mailto:` or https URL), `DRY_RUN`, `VERBOSE`, `GITHUB_RUN_ID`, `GITHUB_STEP_SUMMARY`. Missing required secret → exit 2 with a message naming the variable (never the value).
+- CLI flags: `--dry-run`, `--verbose`, `--test-push <userId>` (sends the user's *next* message to that user's stored subscription **without** changing counter/schedule or writing `delivery_log`; used only for demo and diagnostics; refuses when the user has no subscription).
 - Prints a per-run summary to stdout and appends a Markdown table to `GITHUB_STEP_SUMMARY`: counts by status, max/median delay, list of `skipped_stale` and `failed` user ids (ids only).
 - Redacts secrets and push endpoints from all output.
 - Exit codes: `0` success (even if some pushes failed individually), `1` aborted for invalid content or unexpected fatal error, `2` configuration error.
+- **`SenderIo`** has `out`, `err`, `appendFile`, and `debug`. `debug` is a no-op in production; in verbose mode it writes to stderr. All test harnesses pass `debug: () => {}`.
+
+### Local development: `sender:local` and `--verbose`
+`npm run sender:local` runs `node --env-file=.env src/sender/main.ts`, loading `.env` into `process.env` with no extra dependencies (Node ≥ 20.6 built-in). `.env` is gitignored and never committed.
+
+Add `--verbose` (or set `VERBOSE=1` in `.env`) to enable detailed stderr logging of every port call:
+```
+npm run sender:local -- --dry-run --verbose
+npm run sender:local -- --verbose
+npm run sender:local -- --test-push <userId> --verbose
+```
+
+Verbose output (to stderr) covers:
+- **DB calls**: every `claimDue`, `peekDue`, `finalizeSent`, `finalizeSkipped`, `releaseClaim`, `markExpired`, `pruneInactive`, `getById` — arguments and return values. Subscription rows are logged as `{id, tz, localTime, msgIdx, nextSendAt, hasSub}` (never the push endpoint or keys).
+- **Push calls**: endpoint truncated to 40 chars, full payload `{v, title, body(Nchars), tag}`, options `{ttl, urgency, topic}`, and the `PushResult` kind + HTTP status.
+- **Delivery log calls**: every `record` and `recordRun` — full entry/summary structs (no endpoints, no message text in keys, no secrets).
+
+Verbose mode is implemented via thin proxy wrappers in `src/sender/debug-proxies.ts` (`verboseUsers`, `verbosePush`, `verboseLog`). Each wraps the real port, calls the real method, and logs before and after. The proxies are only applied when `config.verbose === true`; CI and production never set that flag and are unaffected.
 
 ### Adapter `src/adapters/web-push/web-push-sender.ts`
 - Implements `PushSender` using `web-push` (`setVapidDetails`, `sendNotification` with `TTL`, `urgency`, `topic`). Payload `JSON.stringify(PushPayload)` (encrypted by the library).
@@ -64,7 +82,7 @@ steps: checkout (default branch) → setup-node (from .nvmrc, npm cache) → npm
 - Actions pinned by commit SHA; no third-party actions except first-party (`actions/checkout`, `actions/setup-node`).
 
 ## Files and components
-`src/core/usecases/run-send-cycle.ts`, `src/core/scheduling/*` (reused), `src/sender/main.ts`, `src/sender/config.ts`, `src/adapters/web-push/web-push-sender.ts`, `scripts/generate-vapid-keys.ts`, `.github/workflows/send.yml`, `docs/operations.md` (secrets setup, keep-alive, runbook), `tests/fakes/{in-memory-user-repository,fake-push-sender,in-memory-delivery-log}.ts`, `tests/core/usecases/run-send-cycle.test.ts`, `tests/sender/*`.
+`src/core/usecases/run-send-cycle.ts`, `src/core/scheduling/*` (reused), `src/sender/main.ts`, `src/sender/config.ts`, `src/sender/debug-proxies.ts`, `src/adapters/web-push/web-push-sender.ts`, `scripts/generate-vapid-keys.ts`, `.github/workflows/send.yml`, `docs/operations.md` (secrets setup, keep-alive, runbook), `tests/fakes/{in-memory-user-repository,fake-push-sender,in-memory-delivery-log}.ts`, `tests/core/usecases/run-send-cycle.test.ts`, `tests/sender/*`.
 
 ## Interfaces and contracts
 Ports per 00 §4. `PushPayload` v1: `{ v:1, title, body, tag }` — the service worker (Task 6) depends on exactly this shape; any change bumps `v`.

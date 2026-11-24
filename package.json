@@ -18,6 +18,7 @@
     "dev:pwa": "vite",
     "icons:generate": "node scripts/generate-icons.ts",
     "sender": "node src/sender/main.ts",
+    "sender:local": "node --env-file=.env src/sender/main.ts",
     "vapid:generate": "node scripts/generate-vapid-keys.ts",
     "ci": "npm run lint && npm run typecheck && npm run test"
   },
